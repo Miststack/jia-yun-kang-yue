@@ -7,3 +7,4 @@ __pycache__/
 *.spec.bak
 .venv/
 venv/
+_upload_via_api.py

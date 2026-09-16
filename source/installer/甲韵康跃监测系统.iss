@@ -24,6 +24,7 @@ PrivilegesRequired=lowest
 UsePreviousAppDir=no
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+SetupIconFile=..\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 SetupLogging=yes
