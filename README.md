@@ -487,21 +487,41 @@ cd source
 
 ## 16. 如何改成同类系统
 
-同类监测软件（换名称、单位、阈值、预警文案、热力图部位）**主要改一份配置**：
+同类监测软件（换名称、单位、阈值、预警文案、热力图部位）**主要改一份配置**。文件里每一段都带「说明」字段：
 
 [`source/app/config.json`](source/app/config.json)
 
-改完后双击 `source/启动监测系统.bat` 即可预览。完整对照表见 [`source/如何改成同类系统.md`](source/如何改成同类系统.md)。
+逐步对照：[如何改成同类系统.md](source/如何改成同类系统.md)
 
-必须改的三项：
+### 怎么改
+
+1. 打开 `config.json`，按里面的「说明」改
+2. 双击 `source/启动监测系统.bat` 预览
+3. 再运行 `打包成EXE.bat`、`生成安装包.bat` 做安装包
+
+不要手改 `config.js`（启动时会覆盖）。`index.html` 只有加新按钮时才需要动。
+
+### 必须改的三项
 
 1. `branding.short_name` / `logo_title`：产品名（会变成 exe 和安装包文件名）
-2. `branding.installer_id`：新的 GUID，避免和本产品抢卸载项
+2. `branding.installer_id`：新的 GUID，避免和甲韵康跃抢卸载项。PowerShell：`[guid]::NewGuid().ToString()`
 3. `labels` 与 `alert.*_template`：卡片标题和预警句子
 
-可选：`unit`（μV / mmHg / ℃）、`baseline` 倍数、`preset_sequence`、串口波特率、窗口大小。
+### 各段改什么
 
-`apply_config.py` 会把 json 写成 `config.js`，并更新安装脚本里的名称和版本。不要手改 `config.js`。
+| 配置段 | 说明 |
+|--------|------|
+| `branding` | 窗口标题、左上角文字、单位（μV/mmHg/℃）、热力图部位名、安装包 GUID |
+| `baseline` | 学几个点、合法范围、警戒/危险倍数、未学成时的默认线 |
+| `alert` | 四级名称、预警条句子。模板可用 `{risk}{safe}{baseline}{slope}{unit}` |
+| `labels` | 五张卡片和三张图的标题，把「肌电」换成「压力」就改这里 |
+| `window` | 窗口宽高、背景色 |
+| `display` | 波形点数、热力图格子、Y 轴上限 |
+| `simulation` | 无设备演示间隔、预设刺激曲线 |
+| `serial` | 波特率和刷新间隔 |
+| `alarm` | 红/黄提示音频率和间隔 |
+
+例如改成压力监测：把 `unit` 改成 `mmHg`，`current_value` 改成「当前压力」，`anatomy_label` 改成部位名，并换一个新的 `installer_id`。
 
 ---
 

@@ -1,17 +1,27 @@
 {
-  "说明": "改这一份就能做成同类监测系统。改完后运行 source/apply_config.py（启动脚本会自动跑），再打开软件。改名称/版本后如需安装包，再运行 打包成EXE.bat 和 生成安装包.bat。",
+  "说明": "同类监测系统主要改这一份。改完后双击「启动监测系统.bat」预览（会自动生成 config.js）。要做安装包再运行 打包成EXE.bat、生成安装包.bat。不要手改 config.js。带「说明」的字段只是注释，软件不会拿来显示。",
   "branding": {
+    "说明": "产品名、单位、安装包身份。同类新产品必须更换 installer_id，否则会和甲韵康跃抢同一个卸载项。",
     "app_name": "甲韵康跃 · 监测与预警系统",
+    "app_name_说明": "窗口标题栏完整名称",
     "short_name": "甲韵康跃监测系统",
+    "short_name_说明": "exe、开始菜单、安装包文件名，不要有特殊符号",
     "logo_title": "甲韵康跃",
+    "logo_title_说明": "界面左上角大字",
     "logo_subtitle": "监测与预警系统",
+    "logo_subtitle_说明": "界面左上角小字",
     "publisher": "甲韵康跃",
+    "publisher_说明": "安装包里的发布者",
     "version": "1.0.1",
     "unit": "μV",
+    "unit_说明": "数值单位。肌电 μV，压力可改 mmHg，温度可改 ℃",
     "anatomy_label": "喉返神经",
-    "installer_id": "{8E4C2A71-6B3F-4D19-9C5A-21F0A8D47B16}"
+    "anatomy_label_说明": "热力图中央标注的部位名称",
+    "installer_id": "{8E4C2A71-6B3F-4D19-9C5A-21F0A8D47B16}",
+    "installer_id_说明": "Windows 卸载用的 GUID。新产品必须换成新的，可用 PowerShell: [guid]::NewGuid().ToString()"
   },
   "window": {
+    "说明": "桌面窗口大小和背景色",
     "width": 1480,
     "height": 940,
     "min_width": 1080,
@@ -19,6 +29,7 @@
     "background": "#0a0d1a"
   },
   "baseline": {
+    "说明": "自适应基线。前 learn_count 个落在 valid_min～valid_max 的点会学习；去掉两端各 trim_each_end 个再平均。警戒=基线×warn_multiplier，危险=基线×danger_multiplier，再夹到 clamp_* 范围内。未学成时用 default_warn / default_danger。",
     "learn_count": 20,
     "valid_min": 10,
     "valid_max": 300,
@@ -33,8 +44,11 @@
     "clamp_danger_max": 800
   },
   "alert": {
+    "说明": "四级预警文案和斜率规则。判定顺序：先危险线，再警戒线，再斜率，最后安全。模板里可用 {risk}{safe}{baseline}{slope}{unit}。",
     "slope_threshold": 8,
+    "slope_threshold_说明": "大于此斜率（单位/步）判为趋势预判",
     "slope_lookback": 4,
+    "slope_lookback_说明": "用最近几个点算斜率，4 表示 (当前-前第4点)/3",
     "danger_title": "紧急危险",
     "warn_title": "警戒",
     "trend_title": "趋势预判",
@@ -45,6 +59,7 @@
     "safe_text": "状态平稳，系统持续监测中"
   },
   "display": {
+    "说明": "波形和热力图显示。clamp_* 限制画在图上的数值范围；max_points 是波形保留点数。",
     "clamp_min": 100,
     "clamp_max": 800,
     "max_points": 200,
@@ -52,9 +67,11 @@
     "forecast_steps": 6,
     "heatmap_grid": 8,
     "chart_y_max": 800,
-    "dot_orange_slope": 5
+    "dot_orange_slope": 5,
+    "dot_orange_slope_说明": "波形点斜率大于此为橙色，再大于 slope_threshold 为红色"
   },
   "simulation": {
+    "说明": "无设备时的演示数据。preset_sequence 是「预设序列」按钮播放的曲线，会循环。",
     "interval_ms": 500,
     "spike_probability": 0.10,
     "startup_points": 50,
@@ -65,12 +82,14 @@
     "preset_sequence": [320, 340, 360, 380, 410, 450, 490, 530, 570, 610, 650, 680, 710, 730, 700, 660, 610, 560, 510, 460, 410, 370, 340, 320, 300]
   },
   "serial": {
+    "说明": "真实设备串口。设备按行发送数字，一行可以多个值，例如 320 或 320,335,340。",
     "default_baud": 9600,
     "poll_ms": 80,
     "read_timeout": 0.05,
     "baud_options": [9600, 115200, 57600, 38400, 19200, 4800]
   },
   "alarm": {
+    "说明": "警戒（黄）和紧急危险（红）的提示音。安全、趋势预判不响。暂停会静音。",
     "danger_hz": 900,
     "danger_beep_s": 0.15,
     "danger_interval_ms": 300,
@@ -79,6 +98,7 @@
     "warn_interval_ms": 1000
   },
   "labels": {
+    "说明": "界面上能看到的标题文字。改这里就能把「肌电」换成「压力」等，不必改 index.html。footer_interval 里的 {interval}、footer_hint 里的 {count} 会自动替换。",
     "current_value": "当前肌电值",
     "slope": "实时斜率",
     "risk_level": "风险等级",
