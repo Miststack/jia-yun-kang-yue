@@ -102,6 +102,7 @@
 13. [结束监测](#13-结束监测)
 14. [给别人拷贝时](#14-给别人拷贝时)
 15. [源码](#15-源码)
+16. [如何改成同类系统](#16-如何改成同类系统)
 
 ---
 
@@ -405,19 +406,14 @@
 
 ```text
 source/
-  main.py                 Python 入口：开窗口、串口读写
-  requirements.txt        pywebview / pyserial / pyinstaller
-  app.ico                 软件图标
-  启动监测系统.bat         本机直接运行（会自动装依赖）
-  打包成EXE.bat           PyInstaller 打成 Windows 程序
-  生成安装包.bat           用 Inno Setup 生成安装包
-  甲韵康跃监测系统.spec     PyInstaller 配置（不打包系统 ucrtbase.dll）
-  app/
-    index.html            监测界面、基线、预警、波形、热力图
-    chart.umd.min.js      图表库（离线）
+  apply_config.py / 如何改成同类系统.md
+  main.py
+  app/config.json         同类系统主要改这里
+  app/index.html
+  app/chart.umd.min.js
+  启动监测系统.bat / 打包成EXE.bat / 生成安装包.bat
+  甲韵康跃监测系统.spec
   installer/
-    甲韵康跃监测系统.iss    Inno Setup 安装向导脚本
-    ChineseSimplified.isl 简体中文安装界面
 ```
 
 技术组成：
@@ -486,6 +482,26 @@ cd source
 桌面软件每 **80ms** 向 Python 取一次串口缓存。若用浏览器直接打开 `index.html`，可走 Web Serial；没有网页串口时仍可手动输入。设备行解析与 Python 端相同：一行里的正数都会送进监测。
 
 更细的代码说明见 [`source/README.md`](source/README.md)。
+
+---
+
+## 16. 如何改成同类系统
+
+同类监测软件（换名称、单位、阈值、预警文案、热力图部位）**主要改一份配置**：
+
+[`source/app/config.json`](source/app/config.json)
+
+改完后双击 `source/启动监测系统.bat` 即可预览。完整对照表见 [`source/如何改成同类系统.md`](source/如何改成同类系统.md)。
+
+必须改的三项：
+
+1. `branding.short_name` / `logo_title`：产品名（会变成 exe 和安装包文件名）
+2. `branding.installer_id`：新的 GUID，避免和本产品抢卸载项
+3. `labels` 与 `alert.*_template`：卡片标题和预警句子
+
+可选：`unit`（μV / mmHg / ℃）、`baseline` 倍数、`preset_sequence`、串口波特率、窗口大小。
+
+`apply_config.py` 会把 json 写成 `config.js`，并更新安装脚本里的名称和版本。不要手改 `config.js`。
 
 ---
 

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""甲韵康跃 · 监测与预警系统 桌面入口。"""
+"""甲韵康跃 · 监测与预警系统 桌面入口。窗口标题和尺寸来自 app/config.json。"""
 
 from __future__ import annotations
 
+import json
 import queue
 import re
 import sys
@@ -22,14 +23,20 @@ def app_dir() -> Path:
     return Path(__file__).resolve().parent
 
 
+def load_config() -> dict:
+    path = app_dir() / "app" / "config.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 class SerialWorker:
-    def __init__(self) -> None:
+    def __init__(self, read_timeout: float = 0.05) -> None:
         self._q: queue.Queue[float] = queue.Queue()
         self._lock = threading.Lock()
         self._ser: serial.Serial | None = None
         self._running = False
         self._buffer = ""
         self.port_name = ""
+        self._read_timeout = read_timeout
 
     def list_ports(self) -> list[dict[str, str]]:
         items = []
@@ -45,7 +52,7 @@ class SerialWorker:
     def connect(self, port: str, baudrate: int = 9600) -> dict:
         self.disconnect()
         try:
-            ser = serial.Serial(port, int(baudrate), timeout=0.05)
+            ser = serial.Serial(port, int(baudrate), timeout=self._read_timeout)
         except Exception as exc:
             return {"ok": False, "error": str(exc)}
         with self._lock:
@@ -131,19 +138,32 @@ class Api:
 
 
 def main() -> None:
-    worker = SerialWorker()
+    cfg = load_config()
+    if not getattr(sys, "frozen", False):
+        try:
+            sys.path.insert(0, str(app_dir()))
+            from apply_config import write_branding_bat, write_config_js
+
+            write_config_js(cfg)
+            write_branding_bat(cfg)
+        except Exception:
+            pass
+    brand = cfg.get("branding", {})
+    win = cfg.get("window", {})
+    serial_cfg = cfg.get("serial", {})
+    worker = SerialWorker(read_timeout=float(serial_cfg.get("read_timeout", 0.05)))
     index = app_dir() / "app" / "index.html"
     if not index.exists():
         raise FileNotFoundError(f"找不到界面文件: {index}")
 
     window = webview.create_window(
-        "甲韵康跃 · 监测与预警系统",
+        brand.get("app_name", "监测与预警系统"),
         str(index),
-        width=1480,
-        height=940,
-        min_size=(1080, 720),
+        width=int(win.get("width", 1480)),
+        height=int(win.get("height", 940)),
+        min_size=(int(win.get("min_width", 1080)), int(win.get("min_height", 720))),
         js_api=Api(worker),
-        background_color="#0a0d1a",
+        background_color=win.get("background", "#0a0d1a"),
         text_select=True,
         maximized=False,
     )

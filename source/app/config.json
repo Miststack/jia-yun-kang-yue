@@ -1,0 +1,95 @@
+{
+  "说明": "改这一份就能做成同类监测系统。改完后运行 source/apply_config.py（启动脚本会自动跑），再打开软件。改名称/版本后如需安装包，再运行 打包成EXE.bat 和 生成安装包.bat。",
+  "branding": {
+    "app_name": "甲韵康跃 · 监测与预警系统",
+    "short_name": "甲韵康跃监测系统",
+    "logo_title": "甲韵康跃",
+    "logo_subtitle": "监测与预警系统",
+    "publisher": "甲韵康跃",
+    "version": "1.0.1",
+    "unit": "μV",
+    "anatomy_label": "喉返神经",
+    "installer_id": "{8E4C2A71-6B3F-4D19-9C5A-21F0A8D47B16}"
+  },
+  "window": {
+    "width": 1480,
+    "height": 940,
+    "min_width": 1080,
+    "min_height": 720,
+    "background": "#0a0d1a"
+  },
+  "baseline": {
+    "learn_count": 20,
+    "valid_min": 10,
+    "valid_max": 300,
+    "trim_each_end": 2,
+    "warn_multiplier": 4.0,
+    "danger_multiplier": 6.0,
+    "default_warn": 550,
+    "default_danger": 650,
+    "clamp_warn_min": 150,
+    "clamp_warn_max": 650,
+    "clamp_danger_min": 250,
+    "clamp_danger_max": 800
+  },
+  "alert": {
+    "slope_threshold": 8,
+    "slope_lookback": 4,
+    "danger_title": "紧急危险",
+    "warn_title": "警戒",
+    "trend_title": "趋势预判",
+    "safe_title": "安全",
+    "danger_template": "一级警报！信号超过{risk}{unit}（基线{baseline}{unit}），立即调整拉钩角度！",
+    "warn_template": "二级警戒：信号超过{safe}{unit}（基线{baseline}{unit}），请留意操作！",
+    "trend_template": "趋势预判：信号快速攀升（斜率{slope}{unit}/步），建议提前减压！",
+    "safe_text": "状态平稳，系统持续监测中"
+  },
+  "display": {
+    "clamp_min": 100,
+    "clamp_max": 800,
+    "max_points": 200,
+    "slope_bars": 30,
+    "forecast_steps": 6,
+    "heatmap_grid": 8,
+    "chart_y_max": 800,
+    "dot_orange_slope": 5
+  },
+  "simulation": {
+    "interval_ms": 500,
+    "spike_probability": 0.10,
+    "startup_points": 50,
+    "startup_base": 120,
+    "startup_span": 80,
+    "relearn_points": 5,
+    "reset_points": 10,
+    "preset_sequence": [320, 340, 360, 380, 410, 450, 490, 530, 570, 610, 650, 680, 710, 730, 700, 660, 610, 560, 510, 460, 410, 370, 340, 320, 300]
+  },
+  "serial": {
+    "default_baud": 9600,
+    "poll_ms": 80,
+    "read_timeout": 0.05,
+    "baud_options": [9600, 115200, 57600, 38400, 19200, 4800]
+  },
+  "alarm": {
+    "danger_hz": 900,
+    "danger_beep_s": 0.15,
+    "danger_interval_ms": 300,
+    "warn_hz": 600,
+    "warn_beep_s": 0.2,
+    "warn_interval_ms": 1000
+  },
+  "labels": {
+    "current_value": "当前肌电值",
+    "slope": "实时斜率",
+    "risk_level": "风险等级",
+    "packet_count": "已接收数据包",
+    "baseline": "自适应基线",
+    "heatmap": "喉返神经风险热力图",
+    "waveform": "实时信号波形 · 趋势预判",
+    "slope_chart": "信号上升速度（斜率实时监测）",
+    "serial_title": "连接串口设备",
+    "serial_hint": "选择设备对应的 COM 口。手动输入数据无需连接串口，直接在顶部输入后点发送即可。",
+    "footer_interval": "实时流 / {interval}ms",
+    "footer_hint": "前{count}个有效数据点自动学习基线"
+  }
+}

@@ -462,7 +462,7 @@
 <body>
     <div class="container" id="mainContainer">
         <div class="header">
-            <div class="logo">⚕️ 甲韵康跃 <span>监测与预警系统</span></div>
+            <div class="logo" id="logoTitle">⚕️ 甲韵康跃 <span>监测与预警系统</span></div>
             <div class="header-right">
                 <span class="data-source-status">
                     <span class="dot gray" id="statusDot"></span>
@@ -486,23 +486,23 @@
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-label">📊 当前肌电值</div>
+                <div class="stat-label" id="labelCurrent">📊 当前肌电值</div>
                 <div class="stat-value text-green" id="valDisplay">-- <span class="unit">μV</span></div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">📈 实时斜率</div>
+                <div class="stat-label" id="labelSlope">📈 实时斜率</div>
                 <div class="stat-value text-blue" id="slopeDisplay">-- <span class="unit">μV/步</span></div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">🏷 风险等级</div>
+                <div class="stat-label" id="labelRisk">🏷 风险等级</div>
                 <div class="stat-value text-green" id="levelDisplay" style="font-size:24px;">⚪ 等待数据</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">📦 已接收数据包</div>
+                <div class="stat-label" id="labelPackets">📦 已接收数据包</div>
                 <div class="stat-value text-gray" id="countDisplay">0 <span class="unit">个</span></div>
             </div>
             <div class="stat-card" id="baselineCard">
-                <div class="stat-label">🧬 自适应基线</div>
+                <div class="stat-label" id="labelBaseline">🧬 自适应基线</div>
                 <div class="stat-value small text-purple" id="baselineInfo" style="font-size:16px;">
                     ⏳ 等待数据...
                 </div>
@@ -517,31 +517,31 @@
 
         <div class="row-2">
             <div class="card">
-                <div class="card-title">🔥 喉返神经风险热力图</div>
+                <div class="card-title" id="heatmapTitle">🔥 喉返神经风险热力图</div>
                 <div class="heatmap-wrap"><canvas id="heatmapCanvas"></canvas></div>
             </div>
             <div class="card">
-                <div class="card-title">📈 实时信号波形 · 趋势预判</div>
+                <div class="card-title" id="waveformTitle">📈 实时信号波形 · 趋势预判</div>
                 <div class="chart-wrap tall"><canvas id="trendChart"></canvas></div>
             </div>
         </div>
 
         <div class="card">
-            <div class="card-title">📊 信号上升速度（斜率实时监测）</div>
+            <div class="card-title" id="slopeChartTitle">📊 信号上升速度（斜率实时监测）</div>
             <div class="chart-wrap short"><canvas id="slopeChart"></canvas></div>
         </div>
 
         <div class="footer-bar">
-            <span>🔄 更新频率: <span class="highlight">实时流 / 500ms</span></span>
+            <span>🔄 更新频率: <span class="highlight" id="footerInterval">实时流 / 500ms</span></span>
             <span id="dataLog">📡 等待数据...</span>
-            <span>💡 前20个有效数据点自动学习基线</span>
+            <span id="footerHint">💡 前20个有效数据点自动学习基线</span>
         </div>
     </div>
 
     <div class="modal-overlay" id="serialModal">
         <div class="serial-modal">
-            <h3>连接串口设备</h3>
-            <p>选择设备对应的 COM 口。手动输入数据无需连接串口，直接在顶部输入 μV 后点发送即可。</p>
+            <h3 id="serialTitle">连接串口设备</h3>
+            <p id="serialHint">选择设备对应的 COM 口。手动输入数据无需连接串口，直接在顶部输入 μV 后点发送即可。</p>
             <label for="portSelect">串口</label>
             <select id="portSelect">
                 <option value="">正在扫描...</option>
@@ -563,21 +563,88 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
         (function() {
-            // ============================================
-            // 1. 配置
-            // ============================================
-            const SLOPE_THRESHOLD = 8,
-                MAX_POINTS = 200;
+            const C = window.APP_CONFIG;
+            if (!C) {
+                alert('缺少 app/config.js。请先运行 apply_config.py 或双击「启动监测系统.bat」。');
+                return;
+            }
 
-            const BASELINE_LEARN_COUNT = 20;
-            const BASELINE_MULTIPLIER_WARN = 4.0;
-            const BASELINE_MULTIPLIER_DANGER = 6.0;
-            const MAX_SAFE = 650;
-            const MAX_RISK = 800;
-            const MIN_SAFE = 150;
-            const MIN_RISK = 250;
+            const UNIT = C.branding.unit;
+            const SLOPE_THRESHOLD = C.alert.slope_threshold;
+            const SLOPE_LOOKBACK = C.alert.slope_lookback;
+            const MAX_POINTS = C.display.max_points;
+            const BASELINE_LEARN_COUNT = C.baseline.learn_count;
+            const BASELINE_MULTIPLIER_WARN = C.baseline.warn_multiplier;
+            const BASELINE_MULTIPLIER_DANGER = C.baseline.danger_multiplier;
+            const MAX_SAFE = C.baseline.clamp_warn_max;
+            const MAX_RISK = C.baseline.clamp_danger_max;
+            const MIN_SAFE = C.baseline.clamp_warn_min;
+            const MIN_RISK = C.baseline.clamp_danger_min;
+            const CLAMP_MIN = C.display.clamp_min;
+            const CLAMP_MAX = C.display.clamp_max;
+            const ORANGE_SLOPE = C.display.dot_orange_slope;
+            const FORECAST_STEPS = C.display.forecast_steps;
+            const SLOPE_BARS = C.display.slope_bars;
+            const HEATMAP_GRID = C.display.heatmap_grid;
+            const CHART_Y_MAX = C.display.chart_y_max;
+            const SIM_INTERVAL = C.simulation.interval_ms;
+            const SERIAL_POLL_MS = C.serial.poll_ms;
+
+            function clampDisplay(value) {
+                return Math.max(CLAMP_MIN, Math.min(CLAMP_MAX, value));
+            }
+
+            function fillTemplate(tpl, map) {
+                return tpl.replace(/\{(\w+)\}/g, function(_, key) {
+                    return map[key] != null ? map[key] : '';
+                });
+            }
+
+            function applyBranding() {
+                document.title = C.branding.app_name;
+                const logo = document.getElementById('logoTitle');
+                if (logo) {
+                    logo.innerHTML = '⚕️ ' + C.branding.logo_title + ' <span>' + C.branding.logo_subtitle + '</span>';
+                }
+                document.getElementById('labelCurrent').textContent = '📊 ' + C.labels.current_value;
+                document.getElementById('labelSlope').textContent = '📈 ' + C.labels.slope;
+                document.getElementById('labelRisk').textContent = '🏷 ' + C.labels.risk_level;
+                document.getElementById('labelPackets').textContent = '📦 ' + C.labels.packet_count;
+                document.getElementById('labelBaseline').textContent = '🧬 ' + C.labels.baseline;
+                document.getElementById('heatmapTitle').textContent = '🔥 ' + C.labels.heatmap;
+                document.getElementById('waveformTitle').textContent = '📈 ' + C.labels.waveform;
+                document.getElementById('slopeChartTitle').textContent = '📊 ' + C.labels.slope_chart;
+                document.getElementById('footerInterval').textContent = fillTemplate(
+                    C.labels.footer_interval, { interval: SIM_INTERVAL }
+                );
+                document.getElementById('footerHint').textContent = '💡 ' + fillTemplate(
+                    C.labels.footer_hint, { count: BASELINE_LEARN_COUNT }
+                );
+                document.getElementById('serialTitle').textContent = C.labels.serial_title;
+                document.getElementById('serialHint').textContent = C.labels.serial_hint;
+                document.querySelectorAll('.unit').forEach(function(el) {
+                    const t = el.textContent || '';
+                    if (t.indexOf('个') !== -1) return;
+                    el.textContent = t.indexOf('步') !== -1 ? (UNIT + '/步') : UNIT;
+                });
+                const input = document.getElementById('manualInput');
+                input.placeholder = UNIT;
+                input.min = CLAMP_MIN;
+                input.max = CLAMP_MAX;
+                const baudSelect = document.getElementById('baudSelect');
+                baudSelect.innerHTML = '';
+                (C.serial.baud_options || [9600]).forEach(function(baud) {
+                    const opt = document.createElement('option');
+                    opt.value = String(baud);
+                    opt.textContent = String(baud);
+                    if (baud === C.serial.default_baud) opt.selected = true;
+                    baudSelect.appendChild(opt);
+                });
+            }
+            applyBranding();
 
             let signalData = [],
                 dataCount = 0,
@@ -597,14 +664,12 @@
             let patientBaseline = null;
             let isLearningBaseline = true;
             let baselineBuffer = [];
-            let currentSafeMax = 550;
-            let currentRiskMax = 650;
+            let currentSafeMax = C.baseline.default_warn;
+            let currentRiskMax = C.baseline.default_danger;
             let isBaselineReady = false;
 
             let manualIndex = 0;
-            const manualData = [320, 340, 360, 380, 410, 450, 490, 530, 570, 610, 650, 680, 710, 730, 700, 660, 610, 560, 510,
-                460, 410, 370, 340, 320, 300
-            ];
+            const manualData = C.simulation.preset_sequence.slice();
 
             // ============================================
             // 2. 声音预警
@@ -643,12 +708,12 @@
                     alarmTimer = null; }
                 if (level === 'red') {
                     isAlarmPlaying = true;
-                    playBeep(900, 0.15);
-                    alarmTimer = setInterval(() => { if (isAlarmPlaying) playBeep(900, 0.15); }, 300);
+                    playBeep(C.alarm.danger_hz, C.alarm.danger_beep_s);
+                    alarmTimer = setInterval(() => { if (isAlarmPlaying) playBeep(C.alarm.danger_hz, C.alarm.danger_beep_s); }, C.alarm.danger_interval_ms);
                 } else if (level === 'yellow') {
                     isAlarmPlaying = true;
-                    playBeep(600, 0.2);
-                    alarmTimer = setInterval(() => { if (isAlarmPlaying) playBeep(600, 0.2); }, 1000);
+                    playBeep(C.alarm.warn_hz, C.alarm.warn_beep_s);
+                    alarmTimer = setInterval(() => { if (isAlarmPlaying) playBeep(C.alarm.warn_hz, C.alarm.warn_beep_s); }, C.alarm.warn_interval_ms);
                 } else {
                     stopAlarm();
                 }
@@ -665,7 +730,7 @@
             // ============================================
             function getAdaptiveThresholds() {
                 if (patientBaseline === null || patientBaseline < 5) {
-                    return { safe: 550, risk: 650 };
+                    return { safe: C.baseline.default_warn, risk: C.baseline.default_danger };
                 }
                 let safe = Math.round(patientBaseline * BASELINE_MULTIPLIER_WARN);
                 let risk = Math.round(patientBaseline * BASELINE_MULTIPLIER_DANGER);
@@ -683,11 +748,11 @@
                 if (isBaselineReady && patientBaseline !== null) {
                     const thresholds = getAdaptiveThresholds();
                     infoEl.innerHTML =
-                        `✅ <strong>${patientBaseline} μV</strong> &nbsp;|&nbsp; 🟡${thresholds.safe} &nbsp;|&nbsp; 🔴${thresholds.risk}`;
+                        `✅ <strong>${patientBaseline} ${UNIT}</strong> &nbsp;|&nbsp; 🟡${thresholds.safe} &nbsp;|&nbsp; 🔴${thresholds.risk}`;
                     infoEl.style.color = '#22c55e';
-                    progressEl.textContent = `✅ 基线已校准 · 警戒 ${thresholds.safe} μV · 危险 ${thresholds.risk} μV`;
+                    progressEl.textContent = `✅ 基线已校准 · 警戒 ${thresholds.safe} ${UNIT} · 危险 ${thresholds.risk} ${UNIT}`;
                     progressEl.className = 'baseline-progress done';
-                    statusBar.textContent = `✅ 系统就绪 · 基线 ${patientBaseline} μV`;
+                    statusBar.textContent = `✅ 系统就绪 · 基线 ${patientBaseline} ${UNIT}`;
                     statusBar.className = 'status-bar ready';
                     container.classList.add('baseline-ready');
                     document.getElementById('baselineCard').classList.add('baseline-active');
@@ -717,11 +782,11 @@
 
             function learnBaseline(value) {
                 if (!isLearningBaseline) return;
-                if (value < 10 || value > 300) {
+                if (value < C.baseline.valid_min || value > C.baseline.valid_max) {
                     const progressEl = document.getElementById('learningProgress');
                     const statusBar = document.getElementById('statusBar');
                     if (progressEl && !progressEl.classList.contains('done')) {
-                        progressEl.textContent = '⚠️ 信号异常 (超出10-300μV)，请检查电极';
+                        progressEl.textContent = `⚠️ 信号异常 (超出${C.baseline.valid_min}-${C.baseline.valid_max}${UNIT})，请检查电极`;
                         progressEl.className = 'baseline-progress error';
                     }
                     statusBar.textContent = '⚠️ 信号异常，请检查电极连接';
@@ -733,7 +798,8 @@
 
                 if (baselineBuffer.length >= BASELINE_LEARN_COUNT) {
                     const sorted = [...baselineBuffer].sort((a, b) => a - b);
-                    const trimmed = sorted.slice(2, -2);
+                    const trim = C.baseline.trim_each_end;
+                    const trimmed = sorted.slice(trim, trim ? -trim : undefined);
                     patientBaseline = Math.round(trimmed.reduce((a, b) => a + b, 0) / trimmed.length);
 
                     const thresholds = getAdaptiveThresholds();
@@ -750,8 +816,8 @@
                         container.style.boxShadow = '0 0 60px rgba(34,197,94,0.15), 0 20px 60px rgba(0,0,0,0.7)';
                     }, 800);
 
-                    console.log(`✅ 自适应基线学习完成: ${patientBaseline} μV`);
-                    console.log(`📊 警戒线: ${currentSafeMax} μV, 危险线: ${currentRiskMax} μV`);
+                    console.log(`✅ 自适应基线学习完成: ${patientBaseline} ${UNIT}`);
+                    console.log(`📊 警戒线: ${currentSafeMax} ${UNIT}, 危险线: ${currentRiskMax} ${UNIT}`);
                 }
             }
 
@@ -760,8 +826,8 @@
                 patientBaseline = null;
                 isLearningBaseline = true;
                 baselineBuffer = [];
-                currentSafeMax = 550;
-                currentRiskMax = 650;
+                currentSafeMax = C.baseline.default_warn;
+                currentRiskMax = C.baseline.default_danger;
                 isBaselineReady = false;
 
                 signalData = [];
@@ -773,8 +839,8 @@
                 if (slopeChart) { slopeChart.destroy();
                     slopeChart = null; }
 
-                document.getElementById('valDisplay').innerHTML = '-- <span class="unit">μV</span>';
-                document.getElementById('slopeDisplay').innerHTML = '-- <span class="unit">μV/步</span>';
+                document.getElementById('valDisplay').innerHTML = `-- <span class="unit">${UNIT}</span>`;
+                document.getElementById('slopeDisplay').innerHTML = `-- <span class="unit">${UNIT}/步</span>`;
                 document.getElementById('levelDisplay').textContent = '⚪ 等待数据';
                 document.getElementById('levelDisplay').style.color = '#94a3b8';
                 document.getElementById('warnIcon').textContent = '⏳';
@@ -833,8 +899,8 @@
                     const colors = [];
                     for (let i = 1; i < data.length; i++) {
                         const s = data[i] - data[i - 1];
-                        if (s > 8) colors.push('red');
-                        else if (s > 5) colors.push('orange');
+                        if (s > SLOPE_THRESHOLD) colors.push('red');
+                        else if (s > ORANGE_SLOPE) colors.push('orange');
                         else colors.push('green');
                     }
                     colors.unshift('green');
@@ -843,7 +909,7 @@
                         fy = [];
                     if (len >= 2) {
                         const ls = data[len - 1] - data[len - 2];
-                        for (let i = 1; i <= 6; i++) {
+                        for (let i = 1; i <= FORECAST_STEPS; i++) {
                             fx.push(len - 1 + i);
                             fy.push(data[len - 1] + ls * i);
                         }
@@ -893,7 +959,7 @@
                             scales: {
                                 x: { display: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#6b7a9f',
                                         font: { size: 9 } } },
-                                y: { min: 0, max: 800, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#6b7a9f',
+                                y: { min: 0, max: CHART_Y_MAX, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#6b7a9f',
                                         font: { size: 10 } } }
                             }
                         }
@@ -901,8 +967,8 @@
 
                     const slopes = [];
                     for (let i = 1; i < data.length; i++) slopes.push(data[i] - data[i - 1]);
-                    const recent = slopes.slice(-30);
-                    const sColors = recent.map(s => s > 8 ? '#ef4444' : s > 5 ? '#eab308' : '#22c55e');
+                    const recent = slopes.slice(-SLOPE_BARS);
+                    const sColors = recent.map(s => s > SLOPE_THRESHOLD ? '#ef4444' : s > ORANGE_SLOPE ? '#eab308' : '#22c55e');
                     const sLabels = recent.map((_, i) => i);
 
                     const ctx2 = document.getElementById('slopeChart').getContext('2d');
@@ -945,8 +1011,8 @@
                     const colors = [];
                     for (let i = 1; i < data.length; i++) {
                         const s = data[i] - data[i - 1];
-                        if (s > 8) colors.push('red');
-                        else if (s > 5) colors.push('orange');
+                        if (s > SLOPE_THRESHOLD) colors.push('red');
+                        else if (s > ORANGE_SLOPE) colors.push('orange');
                         else colors.push('green');
                     }
                     colors.unshift('green');
@@ -955,7 +1021,7 @@
                         fy = [];
                     if (len >= 2) {
                         const ls = data[len - 1] - data[len - 2];
-                        for (let i = 1; i <= 6; i++) {
+                        for (let i = 1; i <= FORECAST_STEPS; i++) {
                             fx.push(len - 1 + i);
                             fy.push(data[len - 1] + ls * i);
                         }
@@ -976,8 +1042,8 @@
 
                     const slopes = [];
                     for (let i = 1; i < data.length; i++) slopes.push(data[i] - data[i - 1]);
-                    const recent = slopes.slice(-30);
-                    const sColors = recent.map(s => s > 8 ? '#ef4444' : s > 5 ? '#eab308' : '#22c55e');
+                    const recent = slopes.slice(-SLOPE_BARS);
+                    const sColors = recent.map(s => s > SLOPE_THRESHOLD ? '#ef4444' : s > ORANGE_SLOPE ? '#eab308' : '#22c55e');
                     const sLabels = recent.map((_, i) => i);
 
                     slopeChart.data.labels = sLabels;
@@ -997,7 +1063,7 @@
             function generateDisplayData(count, base) {
                 for (let i = 0; i < count; i++) {
                     const val = base + Math.round((Math.random() - 0.5) * 30);
-                    signalData.push(Math.max(100, Math.min(800, val)));
+                    signalData.push(clampDisplay(val));
                     if (signalData.length > MAX_POINTS) signalData.shift();
                 }
                 // 图表更新
@@ -1011,13 +1077,13 @@
                 // 更新当前值显示
                 if (signalData.length > 0) {
                     const last = signalData[signalData.length - 1];
-                    valDisplay.innerHTML = `${Math.round(last)} <span class="unit">μV</span>`;
+                    valDisplay.innerHTML = `${Math.round(last)} <span class="unit">${UNIT}</span>`;
                 }
             }
 
             function receiveData(rawValue) {
                 if (paused) return;
-                let val = Math.max(100, Math.min(800, rawValue));
+                let val = clampDisplay(rawValue);
 
                 learnBaseline(val);
 
@@ -1032,51 +1098,56 @@
                     len = data.length,
                     currentVal = data[len - 1];
                 let slope = 0;
-                if (len >= 4) slope = (data[len - 1] - data[len - 4]) / 3;
+                if (len >= SLOPE_LOOKBACK) slope = (data[len - 1] - data[len - SLOPE_LOOKBACK]) / Math.max(1, SLOPE_LOOKBACK - 1);
 
-                valDisplay.innerHTML = `${Math.round(currentVal)} <span class="unit">μV</span>`;
-                slopeDisplay.innerHTML = `${slope.toFixed(1)} <span class="unit">μV/步</span>`;
+                valDisplay.innerHTML = `${Math.round(currentVal)} <span class="unit">${UNIT}</span>`;
+                slopeDisplay.innerHTML = `${slope.toFixed(1)} <span class="unit">${UNIT}/步</span>`;
                 countDisplay.textContent = dataCount;
 
                 let levelKey, level, levelColor, warnIconText, warnMsg, bgColor, borderColor, textColor, dotColor;
 
                 if (currentVal >= RISK_MAX) {
                     levelKey = 'red';
-                    level = '🔴 紧急危险';
+                    level = '🔴 ' + C.alert.danger_title;
                     levelColor = '#ef4444';
                     warnIconText = '🔴';
-                    warnMsg =
-                        `⚠️ 一级警报！信号超过${RISK_MAX}μV（基线${patientBaseline || '?'}μV），立即调整拉钩角度！`;
+                    warnMsg = '⚠️ ' + fillTemplate(C.alert.danger_template, {
+                        risk: RISK_MAX, unit: UNIT, baseline: patientBaseline || '?'
+                    });
                     bgColor = 'rgba(239,68,68,0.18)';
                     borderColor = 'rgba(239,68,68,0.5)';
                     textColor = '#ef4444';
                     dotColor = 'red';
                 } else if (currentVal >= SAFE_MAX) {
                     levelKey = 'yellow';
-                    level = '🟡 警戒';
+                    level = '🟡 ' + C.alert.warn_title;
                     levelColor = '#eab308';
                     warnIconText = '🟡';
-                    warnMsg = `⚠️ 二级警戒：信号超过${SAFE_MAX}μV（基线${patientBaseline || '?'}μV），请留意操作！`;
+                    warnMsg = '⚠️ ' + fillTemplate(C.alert.warn_template, {
+                        safe: SAFE_MAX, unit: UNIT, baseline: patientBaseline || '?'
+                    });
                     bgColor = 'rgba(234,179,8,0.15)';
                     borderColor = 'rgba(234,179,8,0.4)';
                     textColor = '#eab308';
                     dotColor = 'yellow';
                 } else if (slope > SLOPE_THRESHOLD) {
                     levelKey = 'blue';
-                    level = '🔵 趋势预判';
+                    level = '🔵 ' + C.alert.trend_title;
                     levelColor = '#3b82f6';
                     warnIconText = '🔵';
-                    warnMsg = `📈 趋势预判：信号快速攀升（斜率${slope.toFixed(1)}μV/步），建议提前减压！`;
+                    warnMsg = '📈 ' + fillTemplate(C.alert.trend_template, {
+                        slope: slope.toFixed(1), unit: UNIT
+                    });
                     bgColor = 'rgba(59,130,246,0.13)';
                     borderColor = 'rgba(59,130,246,0.35)';
                     textColor = '#3b82f6';
                     dotColor = 'blue';
                 } else {
                     levelKey = 'green';
-                    level = '🟢 安全';
+                    level = '🟢 ' + C.alert.safe_title;
                     levelColor = '#22c55e';
                     warnIconText = '✅';
-                    warnMsg = '✅ 状态平稳，系统持续监测中';
+                    warnMsg = '✅ ' + C.alert.safe_text;
                     bgColor = 'rgba(34,197,94,0.10)';
                     borderColor = 'rgba(34,197,94,0.25)';
                     textColor = '#22c55e';
@@ -1094,10 +1165,10 @@
                 let modeName = currentMode === 'sim' ? '模拟' : (currentMode === 'serial' ? '串口' : '预设序列');
                 if (currentMode === 'manual_free') modeName = '手动';
                 statusDot.className = 'dot ' + dotColor;
-                const baselineInfo = patientBaseline ? ` 基线${patientBaseline}μV` : '';
+                const baselineInfo = patientBaseline ? ` 基线${patientBaseline}${UNIT}` : '';
                 statusText.textContent = `${modeName} · ${level.replace(/[🔴🟡🔵🟢⚪]\s*/, '')}${baselineInfo}`;
                 dataLog.textContent =
-                    `📡 ${Math.round(currentVal)} μV | 斜率 ${slope.toFixed(1)} | 已收 ${dataCount} 个${patientBaseline ? ` | 基线 ${patientBaseline} μV` : ''}`;
+                    `📡 ${Math.round(currentVal)} ${UNIT} | 斜率 ${slope.toFixed(1)} | 已收 ${dataCount} 个${patientBaseline ? ` | 基线 ${patientBaseline} ${UNIT}` : ''}`;
 
                 startAlarm(levelKey);
 
@@ -1146,7 +1217,7 @@
                     else if (currentVal >= thresholds.safe) centerVal = 600;
                     else if (slope > SLOPE_THRESHOLD) centerVal = 500;
 
-                    const size = 8,
+                    const size = HEATMAP_GRID,
                         cw = w / size,
                         ch = h / size;
 
@@ -1179,7 +1250,7 @@
                     }
                     ctx.fillStyle = 'rgba(255,255,255,0.5)';
                     ctx.font = '12px sans-serif';
-                    ctx.fillText('喉返神经', cw * 2.6, ch * 4.6);
+                    ctx.fillText(C.branding.anatomy_label, cw * 2.6, ch * 4.6);
                 } catch (e) {
                     // 静默失败
                 }
@@ -1191,9 +1262,9 @@
             function generateSimData() {
                 const last = signalData.length > 0 ? signalData[signalData.length - 1] : 300;
                 let newVal;
-                if (Math.random() < 0.10) newVal = last + Math.round(30 + Math.random() * 55);
+                if (Math.random() < C.simulation.spike_probability) newVal = last + Math.round(30 + Math.random() * 55);
                 else newVal = last + Math.round((Math.random() - 0.5) * 18);
-                newVal = Math.max(100, Math.min(800, newVal));
+                newVal = clampDisplay(newVal);
                 receiveData(newVal);
             }
 
@@ -1215,10 +1286,10 @@
             function startModeTimer() {
                 stopAllTimers();
                 if (currentMode === 'sim') {
-                    simTimer = setInterval(generateSimData, 500);
+                    simTimer = setInterval(generateSimData, SIM_INTERVAL);
                 } else if (currentMode === 'manual_seq') {
                     manualIndex = 0;
-                    manualTimer = setInterval(generateManualSeq, 500);
+                    manualTimer = setInterval(generateManualSeq, SIM_INTERVAL);
                 }
             }
 
@@ -1426,7 +1497,7 @@
                             }
                         }
                     } catch (e) {}
-                }, 80);
+                }, SERIAL_POLL_MS);
             }
 
             // ============================================
@@ -1460,10 +1531,10 @@
                     // 先停止所有定时器
                     stopAllTimers();
                     // 生成5个初始数据点触发学习
-                    for (let i = 0; i < 5; i++) {
-                        const baseVal = 120 + Math.round(Math.random() * 60);
+                    for (let i = 0; i < C.simulation.relearn_points; i++) {
+                        const baseVal = C.simulation.startup_base + Math.round(Math.random() * C.simulation.startup_span);
                         // 直接调用 receiveData，会触发学习
-                        receiveData(Math.max(100, Math.min(800, baseVal)));
+                        receiveData(clampDisplay(baseVal));
                     }
                     // 重新启动定时器（如果是模拟模式）
                     if (currentMode === 'sim') {
@@ -1493,9 +1564,9 @@
                     // 重置基线学习状态，重新学习
                     resetBaselineLearning();
                     // 生成初始数据
-                    for (let i = 0; i < 10; i++) {
-                        const baseVal = 120 + Math.round(Math.random() * 60);
-                        receiveData(Math.max(100, Math.min(800, baseVal)));
+                    for (let i = 0; i < C.simulation.reset_points; i++) {
+                        const baseVal = C.simulation.startup_base + Math.round(Math.random() * C.simulation.startup_span);
+                        receiveData(clampDisplay(baseVal));
                     }
                     return;
                 }
@@ -1524,9 +1595,9 @@
                     // 重置基线学习状态，重新学习
                     resetBaselineLearning();
                     // 生成初始数据
-                    for (let i = 0; i < 10; i++) {
-                        const baseVal = 120 + Math.round(Math.random() * 60);
-                        receiveData(Math.max(100, Math.min(800, baseVal)));
+                    for (let i = 0; i < C.simulation.reset_points; i++) {
+                        const baseVal = C.simulation.startup_base + Math.round(Math.random() * C.simulation.startup_span);
+                        receiveData(clampDisplay(baseVal));
                     }
                 }
             });
@@ -1560,8 +1631,8 @@
                         trendChart = null; }
                     if (slopeChart) { slopeChart.destroy();
                         slopeChart = null; }
-                    valDisplay.innerHTML = '-- <span class="unit">μV</span>';
-                    slopeDisplay.innerHTML = '-- <span class="unit">μV/步</span>';
+                    valDisplay.innerHTML = `-- <span class="unit">${UNIT}</span>`;
+                    slopeDisplay.innerHTML = `-- <span class="unit">${UNIT}/步</span>`;
                     levelDisplay.textContent = '⚪ 等待数据';
                     levelDisplay.style.color = '#94a3b8';
                     warnIcon.textContent = '⏳';
@@ -1571,11 +1642,11 @@
                     warningBox.style.color = '#94a3b8';
                     statusDot.className = 'dot gray';
                     statusText.textContent = '已重置';
-                    dataLog.textContent = `📡 已重置，基线 ${patientBaseline} μV 保留`;
-                    document.getElementById('statusBar').textContent = `🔄 已重置 · 基线 ${patientBaseline} μV 保留`;
+                    dataLog.textContent = `📡 已重置，基线 ${patientBaseline} ${UNIT} 保留`;
+                    document.getElementById('statusBar').textContent = `🔄 已重置 · 基线 ${patientBaseline} ${UNIT} 保留`;
                     document.getElementById('statusBar').className = 'status-bar ready';
                     // 生成显示数据（不增加计数）
-                    generateDisplayData(10, patientBaseline);
+                    generateDisplayData(C.simulation.reset_points, patientBaseline);
                     // 恢复计数显示为0
                     countDisplay.textContent = '0';
                     dataCount = 0;
@@ -1583,9 +1654,9 @@
                     resetBaselineLearning();
                     // 如果当前是模拟模式，生成初始数据
                     if (currentMode === 'sim') {
-                        for (let i = 0; i < 10; i++) {
-                            const baseVal = 120 + Math.round(Math.random() * 60);
-                            receiveData(Math.max(100, Math.min(800, baseVal)));
+                        for (let i = 0; i < C.simulation.reset_points; i++) {
+                            const baseVal = C.simulation.startup_base + Math.round(Math.random() * C.simulation.startup_span);
+                            receiveData(clampDisplay(baseVal));
                         }
                         dataCount = 0;
                         countDisplay.textContent = '0';
@@ -1621,9 +1692,9 @@
             // 11. 初始化
             // ============================================
             // 生成初始数据（同时触发基线学习）
-            for (let i = 0; i < 50; i++) {
-                const baseVal = 120 + Math.round(Math.random() * 80);
-                receiveData(Math.max(100, Math.min(800, baseVal)));
+            for (let i = 0; i < C.simulation.startup_points; i++) {
+                const baseVal = C.simulation.startup_base + Math.round(Math.random() * C.simulation.startup_span);
+                receiveData(clampDisplay(baseVal));
             }
             dataCount = 0;
             countDisplay.textContent = '0';
@@ -1639,19 +1710,18 @@
                     if (signalData.length > 0) {
                         const last = signalData[signalData.length - 1];
                         let slope = 0;
-                        if (signalData.length >= 4) slope = (signalData[signalData.length - 1] - signalData[
-                            signalData.length - 4]) / 3;
+                        if (signalData.length >= SLOPE_LOOKBACK) {
+                            slope = (signalData[signalData.length - 1] - signalData[signalData.length - SLOPE_LOOKBACK]) / Math.max(1, SLOPE_LOOKBACK - 1);
+                        }
                         try { drawHeatmap(last, slope); } catch (e) {}
                     }
                 }, 300);
             });
 
-            console.log('✅ 甲韵康锐 自适应基线版 v2.3 已启动');
-            console.log('🧬 前20个有效数据点自动学习患者基线');
-            console.log('📊 警戒线 = 基线 × 4，危险线 = 基线 × 6');
-            console.log('💡 点击「重学」可重新学习基线');
-            console.log('🔌 点击「串口」连接真实设备');
-            console.log('✅ v2.3 修复：串口缓冲区、多数字提取、重置计数、状态条同步等');
+            console.log('✅ ' + C.branding.app_name + ' 已启动 ' + C.branding.version);
+            console.log('🧬 前' + BASELINE_LEARN_COUNT + '个有效数据点自动学习基线');
+            console.log('📊 警戒线 = 基线 × ' + BASELINE_MULTIPLIER_WARN + '，危险线 = 基线 × ' + BASELINE_MULTIPLIER_DANGER);
+            console.log('改配置请编辑 app/config.json 后运行 apply_config.py');
         })();
     </script>
 </body>

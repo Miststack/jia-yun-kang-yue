@@ -6,6 +6,8 @@
 
 ## 快速开始
 
+改成同类系统请先看 [`如何改成同类系统.md`](如何改成同类系统.md)，主要改 `app/config.json`。
+
 ```bat
 启动监测系统.bat
 ```
@@ -27,17 +29,16 @@ python main.py --debug
 
 ```text
 source/
-  main.py                      窗口 + 串口桥
-  requirements.txt             pywebview / pyserial / pyinstaller
-  app.ico                      窗口与安装包图标
-  启动监测系统.bat
-  打包成EXE.bat                -> dist\甲韵康跃监测系统\
-  生成安装包.bat               需 Inno Setup 6
-  甲韵康跃监测系统.spec
-  app/index.html               监测界面与算法
+  apply_config.py              把 config.json 同步到界面和安装脚本
+  如何改成同类系统.md
+  main.py
+  app/config.json              【同类系统主要改这里】
+  app/config.js                由 apply_config.py 生成
+  app/index.html
   app/chart.umd.min.js
-  installer/甲韵康跃监测系统.iss
-  installer/ChineseSimplified.isl
+  启动监测系统.bat / 打包成EXE.bat / 生成安装包.bat
+  甲韵康跃监测系统.spec
+  installer/
 ```
 
 ## 运行时结构
