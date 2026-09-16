@@ -1,0 +1,9 @@
+# 源码打包产物，不要提交
+source/build/
+source/dist/
+source/installer_output/
+__pycache__/
+*.py[cod]
+*.spec.bak
+.venv/
+venv/

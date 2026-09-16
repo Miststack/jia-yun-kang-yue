@@ -27,6 +27,7 @@
 12. [常见问题](#12-常见问题)
 13. [结束监测](#13-结束监测)
 14. [给别人拷贝时](#14-给别人拷贝时)
+15. [源码](#15-源码)
 
 ---
 
@@ -47,13 +48,16 @@
 
 | 文件 | 做什么 |
 |------|--------|
+| 文件 / 目录 | 做什么 |
+|------|--------|
 | `请先看这个.txt` | 最短发放步骤 |
 | `请先看-发放与安装说明.docx` | 请先看这一份，必须双击安装包安装 |
 | `甲韵康跃监测系统安装包.exe` | 双击安装（深蓝底、带发光波形图标） |
 | `甲韵康跃监测系统安装说明.docx` | 给安装软件的人看，安装向导补充说明 |
 | `甲韵康跃监测系统操作手册.docx` | 装好以后怎么用：演示、手动、串口、按钮、基线、预警 |
+| `source/` | 完整源码（桌面入口、界面、打包脚本、安装向导脚本） |
 
-发给对方时，把整个发放包文件夹一起拷走。
+发给对方安装时，把整个发放包文件夹一起拷走即可。开发或改功能请看 `source/`。
 
 **你需要的安装文件只有这一个：** `甲韵康跃监测系统安装包.exe`  
 请使用标注为 **1.0.1** 的新安装包。旧安装包在部分电脑上会卡在 `ucrtbase.dll`。  
@@ -289,6 +293,82 @@
 3. 对方电脑需要 Windows 10 或 11。
 4. 不需要安装 Python，不需要再打开原来的网页 `3.0.html`。
 5. 装好以后的具体点法，看本页操作流程，或打开 Word：《甲韵康跃监测系统操作手册》。
+
+---
+
+## 15. 源码
+
+源码在仓库的 `source/` 目录，桌面程序结构如下：
+
+```text
+source/
+  main.py                 Python 入口：开窗口、串口读写
+  requirements.txt        pywebview / pyserial / pyinstaller
+  app.ico                 软件图标
+  启动监测系统.bat         本机直接运行（会自动装依赖）
+  打包成EXE.bat           PyInstaller 打成 Windows 程序
+  生成安装包.bat           用 Inno Setup 生成安装包
+  甲韵康跃监测系统.spec     PyInstaller 配置（不打包系统 ucrtbase.dll）
+  app/
+    index.html            监测界面、基线、预警、波形、热力图
+    chart.umd.min.js      图表库（离线）
+  installer/
+    甲韵康跃监测系统.iss    Inno Setup 安装向导脚本
+    ChineseSimplified.isl 简体中文安装界面
+```
+
+技术组成：
+
+- 界面：`app/index.html`（WebView2 里打开，不依赖在线网页）
+- 桌面壳：`main.py` + `pywebview`（Edge Chromium / WebView2）
+- 设备：`pyserial`，按行解析数字，支持 `320` 或 `320,335,340`
+- 打包：PyInstaller onedir → `dist/甲韵康跃监测系统/`
+- 安装包：Inno Setup 6 编译 `installer/甲韵康跃监测系统.iss`
+
+### 从源码运行
+
+需要本机已安装 Python 3，以及 Windows 10/11 自带的 WebView2。
+
+```bat
+cd source
+启动监测系统.bat
+```
+
+或：
+
+```bat
+cd source
+python -m pip install -r requirements.txt
+python main.py
+```
+
+加 `--debug` 可打开调试：
+
+```bat
+python main.py --debug
+```
+
+### 重新打包 EXE
+
+```bat
+cd source
+打包成EXE.bat
+```
+
+完成后程序在：
+
+`source\dist\甲韵康跃监测系统\甲韵康跃监测系统.exe`
+
+### 生成安装包
+
+先安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)，再执行：
+
+```bat
+cd source
+生成安装包.bat
+```
+
+完成后会在 `source\installer_output\` 生成 `甲韵康跃监测系统安装包.exe`，并复制一份到桌面。
 
 ---
 

@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>甲韵康跃 · 监测与预警系统</title>
+    <script src="chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #0a0d1a;
+            color: #e0e6f0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: linear-gradient(145deg, #101826, #0c1120);
+            border-radius: 24px;
+            padding: 24px 28px;
+            border: 1px solid rgba(60, 120, 255, 0.10);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            transition: box-shadow 0.5s ease;
+        }
+        .container.baseline-ready {
+            box-shadow: 0 0 60px rgba(34, 197, 94, 0.15), 0 20px 60px rgba(0, 0, 0, 0.7);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo span {
+            color: #6b7a9f;
+            -webkit-text-fill-color: #6b7a9f;
+            font-weight: 400;
+            font-size: 14px;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: #c8d0e0;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.10);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            border: none;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            border: none;
+            color: #fff;
+        }
+        .btn-success:hover {
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #ca8a04, #eab308);
+            border: none;
+            color: #fff;
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            border: none;
+            color: #fff;
+        }
+        .btn-relearn {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            border: none;
+            color: #fff;
+            font-size: 11px;
+            padding: 4px 12px;
+        }
+        .btn-relearn:hover {
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+        }
+        .data-source-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #6b7a9f;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .dot.green {
+            background: #22c55e;
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+        }
+        .dot.red {
+            background: #ef4444;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+        }
+        .dot.gray {
+            background: #4a5568;
+        }
+        .dot.yellow {
+            background: #eab308;
+            box-shadow: 0 0 12px rgba(234, 179, 8, 0.4);
+        }
+        .dot.blue {
+            background: #3b82f6;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+        }
+        .manual-input-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px 4px 16px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .manual-input-group input {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            width: 80px;
+            outline: none;
+            padding: 4px 0;
+        }
+        .manual-input-group input::placeholder {
+            color: #6b7a9f;
+            font-size: 12px;
+        }
+        .manual-input-group input:focus {
+            border-bottom: 1px solid #3b82f6;
+        }
+        .manual-input-group .btn-send {
+            padding: 4px 14px;
+            font-size: 12px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            border: none;
+            color: #fff;
+            cursor: pointer;
+        }
+        .manual-input-group .btn-send:hover {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            padding: 14px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: border-color 0.3s;
+        }
+        .stat-card.baseline-active {
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6b7a9f;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-size: 30px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .stat-value .unit {
+            font-size: 14px;
+            color: #6b7a9f;
+            font-weight: 400;
+        }
+        .stat-value.small {
+            font-size: 18px;
+        }
+        .text-green {
+            color: #22c55e;
+        }
+        .text-blue {
+            color: #3b82f6;
+        }
+        .text-yellow {
+            color: #eab308;
+        }
+        .text-red {
+            color: #ef4444;
+        }
+        .text-gray {
+            color: #94a3b8;
+        }
+        .text-purple {
+            color: #a78bfa;
+        }
+        .warning-box {
+            padding: 16px 24px;
+            border-radius: 14px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            background: rgba(34, 197, 94, 0.10);
+            color: #22c55e;
+            min-height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 2.2fr;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            padding: 16px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .card-title {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 10px;
+        }
+        .heatmap-wrap {
+            position: relative;
+            width: 100%;
+            padding-top: 80%;
+        }
+        .heatmap-wrap canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 10px;
+        }
+        .chart-wrap {
+            height: 220px;
+        }
+        .chart-wrap.tall {
+            height: 270px;
+        }
+        .chart-wrap.short {
+            height: 140px;
+        }
+        .footer-bar {
+            margin-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #3a4a6a;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding-top: 14px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .footer-bar .highlight {
+            color: #6b7a9f;
+        }
+        .mode-indicator {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .baseline-progress {
+            font-size: 12px;
+            color: #eab308;
+            margin-top: 4px;
+            transition: all 0.3s;
+        }
+        .baseline-progress.done {
+            color: #22c55e;
+        }
+        .baseline-progress.error {
+            color: #ef4444;
+        }
+        .status-bar {
+            padding: 8px 20px;
+            border-radius: 12px;
+            font-size: 28px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 16px;
+            transition: all 0.5s ease;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.06);
+            color: #6b7a9f;
+            letter-spacing: 1px;
+        }
+        .status-bar.learning {
+            background: rgba(234, 179, 8, 0.12);
+            border-color: rgba(234, 179, 8, 0.3);
+            color: #eab308;
+        }
+        .status-bar.ready {
+            background: rgba(34, 197, 94, 0.12);
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+        .status-bar.monitoring {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+        .status-bar.waiting {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.06);
+            color: #6b7a9f;
+        }
+        .status-bar.error {
+            background: rgba(239, 68, 68, 0.12);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        @media (max-width: 1100px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (max-width: 900px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .row-2 {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 16px;
+            }
+            .warning-box {
+                font-size: 18px;
+                padding: 12px 16px;
+            }
+            .manual-input-group input {
+                width: 60px;
+            }
+            .status-bar {
+                font-size: 20px;
+                padding: 6px 16px;
+            }
+        }
+        @media (max-width: 500px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .stat-value {
+                font-size: 22px;
+            }
+            .header-right {
+                gap: 4px;
+            }
+            .btn {
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+            .status-bar {
+                font-size: 16px;
+                padding: 4px 12px;
+            }
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(4, 8, 18, 0.72);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .serial-modal {
+            width: 420px;
+            max-width: 100%;
+            background: #121a2b;
+            border: 1px solid rgba(96, 165, 250, 0.22);
+            border-radius: 18px;
+            padding: 22px 24px;
+        }
+        .serial-modal h3 {
+            font-size: 18px;
+            margin-bottom: 6px;
+            color: #e0e6f0;
+        }
+        .serial-modal p {
+            font-size: 12px;
+            color: #6b7a9f;
+            margin-bottom: 16px;
+        }
+        .serial-modal label {
+            display: block;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+        .serial-modal select {
+            width: 100%;
+            margin-bottom: 14px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #0c1322;
+            color: #e0e6f0;
+            outline: none;
+        }
+        .serial-modal .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="mainContainer">
+        <div class="header">
+            <div class="logo">⚕️ 甲韵康跃 <span>监测与预警系统</span></div>
+            <div class="header-right">
+                <span class="data-source-status">
+                    <span class="dot gray" id="statusDot"></span>
+                    <span id="statusText">等待信号</span>
+                </span>
+                <div class="manual-input-group">
+                    <input type="number" id="manualInput" placeholder="μV" step="1" min="100" max="800">
+                    <button class="btn-send" id="sendBtn">发送</button>
+                </div>
+                <button class="btn btn-success" id="connectBtn">🔌 串口</button>
+                <button class="btn" id="disconnectBtn" style="display:none;">⛔ 断开</button>
+                <button class="btn" id="modeBtn">📊 模拟</button>
+                <button class="btn" id="pauseBtn">⏸ 暂停</button>
+                <button class="btn btn-primary" id="resetBtn">↻ 重置</button>
+                <button class="btn btn-relearn" id="relearnBtn">🧬 重学</button>
+                <span class="mode-indicator" id="modeLabel">模式: 模拟</span>
+            </div>
+        </div>
+
+        <div class="status-bar waiting" id="statusBar">⏳ 等待信号接入...</div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">📊 当前肌电值</div>
+                <div class="stat-value text-green" id="valDisplay">-- <span class="unit">μV</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">📈 实时斜率</div>
+                <div class="stat-value text-blue" id="slopeDisplay">-- <span class="unit">μV/步</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">🏷 风险等级</div>
+                <div class="stat-value text-green" id="levelDisplay" style="font-size:24px;">⚪ 等待数据</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">📦 已接收数据包</div>
+                <div class="stat-value text-gray" id="countDisplay">0 <span class="unit">个</span></div>
+            </div>
+            <div class="stat-card" id="baselineCard">
+                <div class="stat-label">🧬 自适应基线</div>
+                <div class="stat-value small text-purple" id="baselineInfo" style="font-size:16px;">
+                    ⏳ 等待数据...
+                </div>
+                <div class="baseline-progress" id="learningProgress">接收数据后自动学习</div>
+            </div>
+        </div>
+
+        <div class="warning-box" id="warningBox">
+            <span id="warnIcon">⏳</span>
+            <span id="warnText">等待数据传入...</span>
+        </div>
+
+        <div class="row-2">
+            <div class="card">
+                <div class="card-title">🔥 喉返神经风险热力图</div>
+                <div class="heatmap-wrap"><canvas id="heatmapCanvas"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-title">📈 实时信号波形 · 趋势预判</div>
+                <div class="chart-wrap tall"><canvas id="trendChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📊 信号上升速度（斜率实时监测）</div>
+            <div class="chart-wrap short"><canvas id="slopeChart"></canvas></div>
+        </div>
+
+        <div class="footer-bar">
+            <span>🔄 更新频率: <span class="highlight">实时流 / 500ms</span></span>
+            <span id="dataLog">📡 等待数据...</span>
+            <span>💡 前20个有效数据点自动学习基线</span>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="serialModal">
+        <div class="serial-modal">
+            <h3>连接串口设备</h3>
+            <p>选择设备对应的 COM 口。手动输入数据无需连接串口，直接在顶部输入 μV 后点发送即可。</p>
+            <label for="portSelect">串口</label>
+            <select id="portSelect">
+                <option value="">正在扫描...</option>
+            </select>
+            <label for="baudSelect">波特率</label>
+            <select id="baudSelect">
+                <option value="9600" selected>9600</option>
+                <option value="115200">115200</option>
+                <option value="57600">57600</option>
+                <option value="38400">38400</option>
+                <option value="19200">19200</option>
+                <option value="4800">4800</option>
+            </select>
+            <div class="modal-actions">
+                <button class="btn" id="refreshPortsBtn">刷新</button>
+                <button class="btn" id="cancelSerialBtn">取消</button>
+                <button class="btn btn-success" id="confirmSerialBtn">连接</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ============================================
+            // 1. 配置
+            // ============================================
+            const SLOPE_THRESHOLD = 8,
+                MAX_POINTS = 200;
+
+            const BASELINE_LEARN_COUNT = 20;
+            const BASELINE_MULTIPLIER_WARN = 4.0;
+            const BASELINE_MULTIPLIER_DANGER = 6.0;
+            const MAX_SAFE = 650;
+            const MAX_RISK = 800;
+            const MIN_SAFE = 150;
+            const MIN_RISK = 250;
+
+            let signalData = [],
+                dataCount = 0,
+                paused = false;
+            let currentMode = 'sim';
+            let trendChart = null,
+                slopeChart = null;
+            let serialReader = null,
+                serialPort = null,
+                keepReading = false;
+            let simTimer = null,
+                manualTimer = null;
+
+            // ---- 串口缓冲区（修复丢数据Bug） ----
+            let serialBuffer = '';
+
+            let patientBaseline = null;
+            let isLearningBaseline = true;
+            let baselineBuffer = [];
+            let currentSafeMax = 550;
+            let currentRiskMax = 650;
+            let isBaselineReady = false;
+
+            let manualIndex = 0;
+            const manualData = [320, 340, 360, 380, 410, 450, 490, 530, 570, 610, 650, 680, 710, 730, 700, 660, 610, 560, 510,
+                460, 410, 370, 340, 320, 300
+            ];
+
+            // ============================================
+            // 2. 声音预警
+            // ============================================
+            let audioCtx = null;
+            let alarmTimer = null;
+            let isAlarmPlaying = false;
+
+            function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            function playBeep(frequency, duration) {
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.frequency.value = frequency;
+                    osc.type = 'square';
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                    osc.start(audioCtx.currentTime);
+                    osc.stop(audioCtx.currentTime + duration);
+                } catch (e) { /* 静默 */ }
+            }
+
+            function startAlarm(level) {
+                initAudio();
+                if (audioCtx.state === 'suspended') {
+                    try { audioCtx.resume(); } catch (e) {}
+                }
+                if (alarmTimer) { clearInterval(alarmTimer);
+                    alarmTimer = null; }
+                if (level === 'red') {
+                    isAlarmPlaying = true;
+                    playBeep(900, 0.15);
+                    alarmTimer = setInterval(() => { if (isAlarmPlaying) playBeep(900, 0.15); }, 300);
+                } else if (level === 'yellow') {
+                    isAlarmPlaying = true;
+                    playBeep(600, 0.2);
+                    alarmTimer = setInterval(() => { if (isAlarmPlaying) playBeep(600, 0.2); }, 1000);
+                } else {
+                    stopAlarm();
+                }
+            }
+
+            function stopAlarm() {
+                isAlarmPlaying = false;
+                if (alarmTimer) { clearInterval(alarmTimer);
+                    alarmTimer = null; }
+            }
+
+            // ============================================
+            // 3. 自适应基线核心
+            // ============================================
+            function getAdaptiveThresholds() {
+                if (patientBaseline === null || patientBaseline < 5) {
+                    return { safe: 550, risk: 650 };
+                }
+                let safe = Math.round(patientBaseline * BASELINE_MULTIPLIER_WARN);
+                let risk = Math.round(patientBaseline * BASELINE_MULTIPLIER_DANGER);
+                safe = Math.min(Math.max(safe, MIN_SAFE), MAX_SAFE);
+                risk = Math.min(Math.max(risk, MIN_RISK), MAX_RISK);
+                return { safe, risk };
+            }
+
+            function updateBaselineUI() {
+                const infoEl = document.getElementById('baselineInfo');
+                const progressEl = document.getElementById('learningProgress');
+                const statusBar = document.getElementById('statusBar');
+                const container = document.getElementById('mainContainer');
+
+                if (isBaselineReady && patientBaseline !== null) {
+                    const thresholds = getAdaptiveThresholds();
+                    infoEl.innerHTML =
+                        `✅ <strong>${patientBaseline} μV</strong> &nbsp;|&nbsp; 🟡${thresholds.safe} &nbsp;|&nbsp; 🔴${thresholds.risk}`;
+                    infoEl.style.color = '#22c55e';
+                    progressEl.textContent = `✅ 基线已校准 · 警戒 ${thresholds.safe} μV · 危险 ${thresholds.risk} μV`;
+                    progressEl.className = 'baseline-progress done';
+                    statusBar.textContent = `✅ 系统就绪 · 基线 ${patientBaseline} μV`;
+                    statusBar.className = 'status-bar ready';
+                    container.classList.add('baseline-ready');
+                    document.getElementById('baselineCard').classList.add('baseline-active');
+                    statusDot.className = 'dot green';
+                    statusText.textContent = '基线已校准 ✓';
+                } else if (isLearningBaseline && baselineBuffer.length > 0) {
+                    const pct = Math.round((baselineBuffer.length / BASELINE_LEARN_COUNT) * 100);
+                    infoEl.innerHTML = `⏳ 学习中... (${baselineBuffer.length}/${BASELINE_LEARN_COUNT})`;
+                    infoEl.style.color = '#eab308';
+                    progressEl.textContent = `🧬 校准中 ${pct}% · 请保持信号稳定`;
+                    progressEl.className = 'baseline-progress';
+                    statusBar.textContent = `🧬 基线校准中 ${pct}% (${baselineBuffer.length}/${BASELINE_LEARN_COUNT})`;
+                    statusBar.className = 'status-bar learning';
+                    statusDot.className = 'dot yellow';
+                    statusText.textContent = '学习中...';
+                } else {
+                    infoEl.innerHTML = `⏳ 等待信号...`;
+                    infoEl.style.color = '#6b7a9f';
+                    progressEl.textContent = '接收有效信号后自动学习';
+                    progressEl.className = 'baseline-progress';
+                    statusBar.textContent = '⏳ 等待信号接入...';
+                    statusBar.className = 'status-bar waiting';
+                    statusDot.className = 'dot gray';
+                    statusText.textContent = '等待信号';
+                }
+            }
+
+            function learnBaseline(value) {
+                if (!isLearningBaseline) return;
+                if (value < 10 || value > 300) {
+                    const progressEl = document.getElementById('learningProgress');
+                    const statusBar = document.getElementById('statusBar');
+                    if (progressEl && !progressEl.classList.contains('done')) {
+                        progressEl.textContent = '⚠️ 信号异常 (超出10-300μV)，请检查电极';
+                        progressEl.className = 'baseline-progress error';
+                    }
+                    statusBar.textContent = '⚠️ 信号异常，请检查电极连接';
+                    statusBar.className = 'status-bar error';
+                    return;
+                }
+                baselineBuffer.push(value);
+                updateBaselineUI();
+
+                if (baselineBuffer.length >= BASELINE_LEARN_COUNT) {
+                    const sorted = [...baselineBuffer].sort((a, b) => a - b);
+                    const trimmed = sorted.slice(2, -2);
+                    patientBaseline = Math.round(trimmed.reduce((a, b) => a + b, 0) / trimmed.length);
+
+                    const thresholds = getAdaptiveThresholds();
+                    currentSafeMax = thresholds.safe;
+                    currentRiskMax = thresholds.risk;
+                    isLearningBaseline = false;
+                    isBaselineReady = true;
+
+                    updateBaselineUI();
+
+                    const container = document.getElementById('mainContainer');
+                    container.style.boxShadow = '0 0 80px rgba(34,197,94,0.25), 0 20px 60px rgba(0,0,0,0.7)';
+                    setTimeout(() => {
+                        container.style.boxShadow = '0 0 60px rgba(34,197,94,0.15), 0 20px 60px rgba(0,0,0,0.7)';
+                    }, 800);
+
+                    console.log(`✅ 自适应基线学习完成: ${patientBaseline} μV`);
+                    console.log(`📊 警戒线: ${currentSafeMax} μV, 危险线: ${currentRiskMax} μV`);
+                }
+            }
+
+            function resetBaselineLearning() {
+                stopAlarm();
+                patientBaseline = null;
+                isLearningBaseline = true;
+                baselineBuffer = [];
+                currentSafeMax = 550;
+                currentRiskMax = 650;
+                isBaselineReady = false;
+
+                signalData = [];
+                dataCount = 0;
+                document.getElementById('countDisplay').textContent = '0';
+
+                if (trendChart) { trendChart.destroy();
+                    trendChart = null; }
+                if (slopeChart) { slopeChart.destroy();
+                    slopeChart = null; }
+
+                document.getElementById('valDisplay').innerHTML = '-- <span class="unit">μV</span>';
+                document.getElementById('slopeDisplay').innerHTML = '-- <span class="unit">μV/步</span>';
+                document.getElementById('levelDisplay').textContent = '⚪ 等待数据';
+                document.getElementById('levelDisplay').style.color = '#94a3b8';
+                document.getElementById('warnIcon').textContent = '⏳';
+                document.getElementById('warnText').textContent = '重新学习中...';
+                document.getElementById('warningBox').style.background = 'rgba(255,255,255,0.03)';
+                document.getElementById('warningBox').style.borderColor = 'rgba(255,255,255,0.08)';
+                document.getElementById('warningBox').style.color = '#94a3b8';
+                document.getElementById('mainContainer').classList.remove('baseline-ready');
+                document.getElementById('baselineCard').classList.remove('baseline-active');
+
+                updateBaselineUI();
+                console.log('🔄 基线已重置，等待新数据学习');
+            }
+
+            // ============================================
+            // 4. 核心数据处理
+            // ============================================
+            function initData() {
+                signalData = [];
+                for (let i = 0; i < MAX_POINTS; i++) {
+                    signalData.push(Math.round(300 + 40 * Math.sin(i / 20) + 12 * (Math.random() - 0.5) * 2));
+                }
+                dataCount = 0;
+            }
+            initData();
+
+            const $ = id => document.getElementById(id);
+            const valDisplay = $('valDisplay'),
+                slopeDisplay = $('slopeDisplay'),
+                levelDisplay = $('levelDisplay');
+            const countDisplay = $('countDisplay'),
+                warningBox = $('warningBox'),
+                warnIcon = $('warnIcon');
+            const warnText = $('warnText'),
+                statusDot = $('statusDot'),
+                statusText = $('statusText'),
+                dataLog = $('dataLog');
+            const modeLabel = $('modeLabel');
+
+            // ---- 独立的图表初始化函数 ----
+            function initCharts(data) {
+                try {
+                    if (trendChart) {
+                        trendChart.destroy();
+                        trendChart = null;
+                    }
+                    if (slopeChart) {
+                        slopeChart.destroy();
+                        slopeChart = null;
+                    }
+
+                    const len = data.length;
+                    if (len < 2) return;
+
+                    const xLabels = data.map((_, i) => i);
+                    const colors = [];
+                    for (let i = 1; i < data.length; i++) {
+                        const s = data[i] - data[i - 1];
+                        if (s > 8) colors.push('red');
+                        else if (s > 5) colors.push('orange');
+                        else colors.push('green');
+                    }
+                    colors.unshift('green');
+
+                    let fx = [],
+                        fy = [];
+                    if (len >= 2) {
+                        const ls = data[len - 1] - data[len - 2];
+                        for (let i = 1; i <= 6; i++) {
+                            fx.push(len - 1 + i);
+                            fy.push(data[len - 1] + ls * i);
+                        }
+                    }
+
+                    const ctx = document.getElementById('trendChart').getContext('2d');
+                    trendChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: xLabels,
+                            datasets: [{
+                                label: '实时肌电值',
+                                data: data,
+                                borderColor: '#3b82f6',
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0.2
+                            }, {
+                                label: '上升速度',
+                                data: data,
+                                borderColor: 'rgba(0,0,0,0)',
+                                backgroundColor: 'rgba(0,0,0,0)',
+                                pointBackgroundColor: colors,
+                                pointRadius: 4,
+                                pointBorderColor: '#0a0d1a',
+                                pointBorderWidth: 1,
+                                type: 'scatter'
+                            }, {
+                                label: '趋势外推',
+                                data: fy,
+                                borderColor: '#ef4444',
+                                borderDash: [6, 4],
+                                borderWidth: 3,
+                                pointRadius: 5,
+                                pointBackgroundColor: '#ef4444',
+                                fill: false,
+                                labels: fx
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 10 } } }
+                            },
+                            scales: {
+                                x: { display: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#6b7a9f',
+                                        font: { size: 9 } } },
+                                y: { min: 0, max: 800, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#6b7a9f',
+                                        font: { size: 10 } } }
+                            }
+                        }
+                    });
+
+                    const slopes = [];
+                    for (let i = 1; i < data.length; i++) slopes.push(data[i] - data[i - 1]);
+                    const recent = slopes.slice(-30);
+                    const sColors = recent.map(s => s > 8 ? '#ef4444' : s > 5 ? '#eab308' : '#22c55e');
+                    const sLabels = recent.map((_, i) => i);
+
+                    const ctx2 = document.getElementById('slopeChart').getContext('2d');
+                    slopeChart = new Chart(ctx2, {
+                        type: 'bar',
+                        data: { labels: sLabels, datasets: [{ label: '斜率', data: recent, backgroundColor: sColors,
+                                borderWidth: 0, borderRadius: 2 }] },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { display: true, grid: { display: false }, ticks: { color: '#6b7a9f',
+                                        font: { size: 8 } } },
+                                y: { display: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#6b7a9f',
+                                        font: { size: 9 } } }
+                            }
+                        }
+                    });
+
+                    console.log('📊 图表初始化成功，数据点数:', data.length);
+                } catch (e) {
+                    console.error('图表初始化失败:', e);
+                }
+            }
+
+            function updateCharts(data) {
+                try {
+                    if (!data || data.length < 2) {
+                        return;
+                    }
+
+                    if (!trendChart || !slopeChart) {
+                        initCharts(data);
+                        return;
+                    }
+
+                    const len = data.length;
+                    const xLabels = data.map((_, i) => i);
+                    const colors = [];
+                    for (let i = 1; i < data.length; i++) {
+                        const s = data[i] - data[i - 1];
+                        if (s > 8) colors.push('red');
+                        else if (s > 5) colors.push('orange');
+                        else colors.push('green');
+                    }
+                    colors.unshift('green');
+
+                    let fx = [],
+                        fy = [];
+                    if (len >= 2) {
+                        const ls = data[len - 1] - data[len - 2];
+                        for (let i = 1; i <= 6; i++) {
+                            fx.push(len - 1 + i);
+                            fy.push(data[len - 1] + ls * i);
+                        }
+                    }
+
+                    trendChart.data.labels = xLabels;
+                    trendChart.data.datasets[0].data = data;
+                    trendChart.data.datasets[1].data = data;
+                    trendChart.data.datasets[1].pointBackgroundColor = colors;
+                    if (fx.length > 0) {
+                        trendChart.data.datasets[2].data = fy;
+                        trendChart.data.datasets[2].labels = fx;
+                    } else {
+                        trendChart.data.datasets[2].data = [];
+                        trendChart.data.datasets[2].labels = [];
+                    }
+                    trendChart.update('none');
+
+                    const slopes = [];
+                    for (let i = 1; i < data.length; i++) slopes.push(data[i] - data[i - 1]);
+                    const recent = slopes.slice(-30);
+                    const sColors = recent.map(s => s > 8 ? '#ef4444' : s > 5 ? '#eab308' : '#22c55e');
+                    const sLabels = recent.map((_, i) => i);
+
+                    slopeChart.data.labels = sLabels;
+                    slopeChart.data.datasets[0].data = recent;
+                    slopeChart.data.datasets[0].backgroundColor = sColors;
+                    slopeChart.update('none');
+
+                } catch (e) {
+                    console.warn('图表更新失败，尝试重新初始化:', e.message);
+                    if (data && data.length >= 2) {
+                        initCharts(data);
+                    }
+                }
+            }
+
+            // ---- 重置时生成显示数据的辅助函数（不增加计数） ----
+            function generateDisplayData(count, base) {
+                for (let i = 0; i < count; i++) {
+                    const val = base + Math.round((Math.random() - 0.5) * 30);
+                    signalData.push(Math.max(100, Math.min(800, val)));
+                    if (signalData.length > MAX_POINTS) signalData.shift();
+                }
+                // 图表更新
+                if (signalData.length >= 2) {
+                    if (!trendChart || !slopeChart) {
+                        initCharts(signalData);
+                    } else {
+                        updateCharts(signalData);
+                    }
+                }
+                // 更新当前值显示
+                if (signalData.length > 0) {
+                    const last = signalData[signalData.length - 1];
+                    valDisplay.innerHTML = `${Math.round(last)} <span class="unit">μV</span>`;
+                }
+            }
+
+            function receiveData(rawValue) {
+                if (paused) return;
+                let val = Math.max(100, Math.min(800, rawValue));
+
+                learnBaseline(val);
+
+                const thresholds = getAdaptiveThresholds();
+                const SAFE_MAX = thresholds.safe;
+                const RISK_MAX = thresholds.risk;
+
+                signalData.push(val);
+                if (signalData.length > MAX_POINTS) signalData.shift();
+                dataCount++;
+                const data = signalData,
+                    len = data.length,
+                    currentVal = data[len - 1];
+                let slope = 0;
+                if (len >= 4) slope = (data[len - 1] - data[len - 4]) / 3;
+
+                valDisplay.innerHTML = `${Math.round(currentVal)} <span class="unit">μV</span>`;
+                slopeDisplay.innerHTML = `${slope.toFixed(1)} <span class="unit">μV/步</span>`;
+                countDisplay.textContent = dataCount;
+
+                let levelKey, level, levelColor, warnIconText, warnMsg, bgColor, borderColor, textColor, dotColor;
+
+                if (currentVal >= RISK_MAX) {
+                    levelKey = 'red';
+                    level = '🔴 紧急危险';
+                    levelColor = '#ef4444';
+                    warnIconText = '🔴';
+                    warnMsg =
+                        `⚠️ 一级警报！信号超过${RISK_MAX}μV（基线${patientBaseline || '?'}μV），立即调整拉钩角度！`;
+                    bgColor = 'rgba(239,68,68,0.18)';
+                    borderColor = 'rgba(239,68,68,0.5)';
+                    textColor = '#ef4444';
+                    dotColor = 'red';
+                } else if (currentVal >= SAFE_MAX) {
+                    levelKey = 'yellow';
+                    level = '🟡 警戒';
+                    levelColor = '#eab308';
+                    warnIconText = '🟡';
+                    warnMsg = `⚠️ 二级警戒：信号超过${SAFE_MAX}μV（基线${patientBaseline || '?'}μV），请留意操作！`;
+                    bgColor = 'rgba(234,179,8,0.15)';
+                    borderColor = 'rgba(234,179,8,0.4)';
+                    textColor = '#eab308';
+                    dotColor = 'yellow';
+                } else if (slope > SLOPE_THRESHOLD) {
+                    levelKey = 'blue';
+                    level = '🔵 趋势预判';
+                    levelColor = '#3b82f6';
+                    warnIconText = '🔵';
+                    warnMsg = `📈 趋势预判：信号快速攀升（斜率${slope.toFixed(1)}μV/步），建议提前减压！`;
+                    bgColor = 'rgba(59,130,246,0.13)';
+                    borderColor = 'rgba(59,130,246,0.35)';
+                    textColor = '#3b82f6';
+                    dotColor = 'blue';
+                } else {
+                    levelKey = 'green';
+                    level = '🟢 安全';
+                    levelColor = '#22c55e';
+                    warnIconText = '✅';
+                    warnMsg = '✅ 状态平稳，系统持续监测中';
+                    bgColor = 'rgba(34,197,94,0.10)';
+                    borderColor = 'rgba(34,197,94,0.25)';
+                    textColor = '#22c55e';
+                    dotColor = 'green';
+                }
+
+                levelDisplay.textContent = level;
+                levelDisplay.style.color = levelColor;
+                warningBox.style.background = bgColor;
+                warningBox.style.borderColor = borderColor;
+                warningBox.style.color = textColor;
+                warnIcon.textContent = warnIconText;
+                warnText.textContent = warnMsg;
+
+                let modeName = currentMode === 'sim' ? '模拟' : (currentMode === 'serial' ? '串口' : '预设序列');
+                if (currentMode === 'manual_free') modeName = '手动';
+                statusDot.className = 'dot ' + dotColor;
+                const baselineInfo = patientBaseline ? ` 基线${patientBaseline}μV` : '';
+                statusText.textContent = `${modeName} · ${level.replace(/[🔴🟡🔵🟢⚪]\s*/, '')}${baselineInfo}`;
+                dataLog.textContent =
+                    `📡 ${Math.round(currentVal)} μV | 斜率 ${slope.toFixed(1)} | 已收 ${dataCount} 个${patientBaseline ? ` | 基线 ${patientBaseline} μV` : ''}`;
+
+                startAlarm(levelKey);
+
+                if (signalData.length >= 2) {
+                    try {
+                        if (!trendChart || !slopeChart) {
+                            initCharts(signalData);
+                        } else {
+                            updateCharts(signalData);
+                        }
+                    } catch (e) {
+                        console.warn('图表更新异常，尝试强制重建:', e);
+                        initCharts(signalData);
+                    }
+                }
+
+                try {
+                    drawHeatmap(currentVal, slope);
+                } catch (e) {
+                    // 热力图失败不影响主功能
+                }
+
+                if (signalData.length > MAX_POINTS) signalData = signalData.slice(-MAX_POINTS);
+            }
+
+            // ============================================
+            // 5. 绘图函数
+            // ============================================
+            function drawHeatmap(currentVal, slope) {
+                try {
+                    const canvas = document.getElementById('heatmapCanvas');
+                    const rect = canvas.parentElement.getBoundingClientRect();
+                    const dpr = window.devicePixelRatio || 1,
+                        w = rect.width || 260,
+                        h = rect.height || 210;
+                    canvas.width = w * dpr;
+                    canvas.height = h * dpr;
+                    canvas.style.width = w + 'px';
+                    canvas.style.height = h + 'px';
+                    const ctx = canvas.getContext('2d');
+                    ctx.scale(dpr, dpr);
+
+                    let centerVal = 350;
+                    const thresholds = getAdaptiveThresholds();
+                    if (currentVal >= thresholds.risk) centerVal = 800;
+                    else if (currentVal >= thresholds.safe) centerVal = 600;
+                    else if (slope > SLOPE_THRESHOLD) centerVal = 500;
+
+                    const size = 8,
+                        cw = w / size,
+                        ch = h / size;
+
+                    function getColor(val) {
+                        let t = (val - 200) / 600;
+                        t = Math.max(0, Math.min(1, t));
+                        let r, g, b;
+                        if (t < 0.5) { let p = t / 0.5;
+                            r = Math.round(255 * p);
+                            g = 255;
+                            b = 0; } else { let p = (t - 0.5) / 0.5;
+                            r = 255;
+                            g = Math.round(255 * (1 - p));
+                            b = 0; }
+                        return `rgb(${r},${g},${b})`;
+                    }
+
+                    for (let i = 0; i < size; i++) {
+                        for (let j = 0; j < size; j++) {
+                            let val = 280 + Math.random() * 30;
+                            if (i >= 3 && i <= 4 && j >= 3 && j <= 4) {
+                                val = centerVal + (Math.random() - 0.5) * 20;
+                            }
+                            ctx.fillStyle = getColor(val);
+                            ctx.fillRect(j * cw, i * ch, cw, ch);
+                            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(j * cw, i * ch, cw, ch);
+                        }
+                    }
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText('喉返神经', cw * 2.6, ch * 4.6);
+                } catch (e) {
+                    // 静默失败
+                }
+            }
+
+            // ============================================
+            // 6. 数据生成器
+            // ============================================
+            function generateSimData() {
+                const last = signalData.length > 0 ? signalData[signalData.length - 1] : 300;
+                let newVal;
+                if (Math.random() < 0.10) newVal = last + Math.round(30 + Math.random() * 55);
+                else newVal = last + Math.round((Math.random() - 0.5) * 18);
+                newVal = Math.max(100, Math.min(800, newVal));
+                receiveData(newVal);
+            }
+
+            function generateManualSeq() {
+                if (manualIndex >= manualData.length) manualIndex = 0;
+                const val = manualData[manualIndex];
+                manualIndex++;
+                const noise = Math.round((Math.random() - 0.5) * 6);
+                receiveData(val + noise);
+            }
+
+            function stopAllTimers() {
+                if (simTimer) { clearInterval(simTimer);
+                    simTimer = null; }
+                if (manualTimer) { clearInterval(manualTimer);
+                    manualTimer = null; }
+            }
+
+            function startModeTimer() {
+                stopAllTimers();
+                if (currentMode === 'sim') {
+                    simTimer = setInterval(generateSimData, 500);
+                } else if (currentMode === 'manual_seq') {
+                    manualIndex = 0;
+                    manualTimer = setInterval(generateManualSeq, 500);
+                }
+            }
+
+            // ============================================
+            // 7. 手动输入
+            // ============================================
+            function handleManualSend() {
+                const input = document.getElementById('manualInput');
+                const raw = input.value.trim();
+                if (raw === '') {
+                    alert('请输入有效数字（如 580）');
+                    input.focus();
+                    return;
+                }
+                const val = parseFloat(raw);
+                if (isNaN(val) || val < 0) {
+                    alert('请输入有效数字（如 580）');
+                    input.value = '';
+                    input.focus();
+                    return;
+                }
+                if (currentMode === 'sim' || currentMode === 'manual_seq') {
+                    stopAllTimers();
+                    currentMode = 'manual_free';
+                    modeLabel.textContent = '模式: 手动';
+                    document.getElementById('modeBtn').textContent = '📊 模拟';
+                    document.getElementById('modeBtn').className = 'btn';
+                    dataLog.textContent = '✋ 已切换到手动输入模式';
+                    // 更新状态条
+                    document.getElementById('statusBar').textContent = '✋ 手动输入模式';
+                    document.getElementById('statusBar').className = 'status-bar monitoring';
+                }
+                receiveData(val);
+                input.value = '';
+                input.focus();
+            }
+
+            // ============================================
+            // 8. 串口连接（桌面软件 + 浏览器 Web Serial）
+            // ============================================
+            function isDesktopApp() {
+                return typeof window.pywebview !== 'undefined';
+            }
+
+            function markSerialConnected(portName) {
+                stopAllTimers();
+                currentMode = 'serial';
+                statusDot.className = 'dot green';
+                statusText.textContent = portName ? ('串口 ' + portName) : '串口已连接';
+                dataLog.textContent = '✅ 串口已连接，等待数据...';
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('disconnectBtn').style.display = 'inline-block';
+                modeLabel.textContent = '模式: 串口';
+                document.getElementById('statusBar').textContent = '🔌 串口已连接，等待数据...';
+                document.getElementById('statusBar').className = 'status-bar waiting';
+            }
+
+            function openSerialModal() {
+                document.getElementById('serialModal').classList.add('show');
+                refreshPortList();
+            }
+
+            function closeSerialModal() {
+                document.getElementById('serialModal').classList.remove('show');
+            }
+
+            async function refreshPortList() {
+                const select = document.getElementById('portSelect');
+                select.innerHTML = '<option value="">正在扫描...</option>';
+                try {
+                    const ports = await window.pywebview.api.list_ports();
+                    select.innerHTML = '';
+                    if (!ports || ports.length === 0) {
+                        select.innerHTML = '<option value="">未发现串口，请检查设备后刷新</option>';
+                        return;
+                    }
+                    ports.forEach(function(p) {
+                        const opt = document.createElement('option');
+                        opt.value = p.device;
+                        opt.textContent = p.device + (p.description ? ('  ' + p.description) : '');
+                        select.appendChild(opt);
+                    });
+                } catch (e) {
+                    select.innerHTML = '<option value="">扫描失败</option>';
+                }
+            }
+
+            async function confirmDesktopSerial() {
+                const port = document.getElementById('portSelect').value;
+                const baud = parseInt(document.getElementById('baudSelect').value, 10) || 9600;
+                if (!port) {
+                    alert('未找到可用串口，请检查设备连接后点击刷新');
+                    return;
+                }
+                const result = await window.pywebview.api.connect_serial(port, baud);
+                if (!result || !result.ok) {
+                    alert('连接失败：' + ((result && result.error) || '未知错误'));
+                    return;
+                }
+                closeSerialModal();
+                markSerialConnected(port);
+            }
+
+            async function handleConnectClick() {
+                if (isDesktopApp()) {
+                    openSerialModal();
+                    return;
+                }
+                if (navigator.serial) {
+                    await connectWebSerial();
+                    return;
+                }
+                alert('当前环境不支持网页串口。请双击「启动监测系统.bat」使用桌面软件连接设备。手动输入数据仍可直接使用。');
+            }
+
+            async function connectWebSerial() {
+                try {
+                    const port = await navigator.serial.requestPort();
+                    await port.open({ baudRate: 9600 });
+                    serialPort = port;
+                    serialBuffer = '';
+                    markSerialConnected('');
+
+                    const textDecoder = new TextDecoderStream();
+                    port.readable.pipeTo(textDecoder.writable);
+                    const reader = textDecoder.readable.getReader();
+                    keepReading = true;
+
+                    while (keepReading) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        if (value) {
+                            serialBuffer += value;
+                            const lines = serialBuffer.split('\n');
+                            serialBuffer = lines.pop() || '';
+                            for (const line of lines) {
+                                const trimmed = line.trim();
+                                if (trimmed) {
+                                    const numbers = trimmed.match(/\d+\.?\d*/g);
+                                    if (numbers) {
+                                        for (const num of numbers) {
+                                            const val = parseFloat(num);
+                                            if (!isNaN(val) && val > 0) {
+                                                receiveData(val);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    if (error.name !== 'NotFoundError' && error.name !== 'AbortError') {
+                        console.error(error);
+                        alert('连接失败：' + error.message);
+                    }
+                    if (currentMode === 'serial') {
+                        currentMode = 'sim';
+                        startModeTimer();
+                        document.getElementById('connectBtn').style.display = 'inline-block';
+                        document.getElementById('disconnectBtn').style.display = 'none';
+                        statusDot.className = 'dot yellow';
+                        statusText.textContent = '已退回模拟';
+                        modeLabel.textContent = '模式: 模拟';
+                        document.getElementById('statusBar').textContent = '⚠️ 串口断开，已切换模拟';
+                        document.getElementById('statusBar').className = 'status-bar waiting';
+                    }
+                }
+            }
+
+            async function disconnectSerial() {
+                keepReading = false;
+                serialBuffer = '';
+                if (isDesktopApp() && window.pywebview.api) {
+                    try { await window.pywebview.api.disconnect_serial(); } catch (e) {}
+                }
+                if (serialPort) {
+                    try { await serialPort.close(); } catch (e) {}
+                    serialPort = null;
+                }
+                document.getElementById('connectBtn').style.display = 'inline-block';
+                document.getElementById('disconnectBtn').style.display = 'none';
+                currentMode = 'sim';
+                startModeTimer();
+                statusDot.className = 'dot gray';
+                statusText.textContent = '已断开';
+                dataLog.textContent = '📡 已断开串口，切换到模拟模式';
+                modeLabel.textContent = '模式: 模拟';
+                document.getElementById('statusBar').textContent = '📡 已切换模拟模式';
+                document.getElementById('statusBar').className = 'status-bar waiting';
+                stopAlarm();
+            }
+
+            function startSerialPolling() {
+                if (window.__serialPollStarted) return;
+                window.__serialPollStarted = true;
+                setInterval(async function() {
+                    if (currentMode !== 'serial' || paused) return;
+                    if (!window.pywebview || !window.pywebview.api) return;
+                    try {
+                        const values = await window.pywebview.api.poll_serial();
+                        if (values && values.length) {
+                            for (let i = 0; i < values.length; i++) {
+                                receiveData(values[i]);
+                            }
+                        }
+                    } catch (e) {}
+                }, 80);
+            }
+
+            // ============================================
+            // 9. 按钮绑定
+            // ============================================
+            document.getElementById('connectBtn').addEventListener('click', handleConnectClick);
+            document.getElementById('disconnectBtn').addEventListener('click', disconnectSerial);
+            document.getElementById('refreshPortsBtn').addEventListener('click', refreshPortList);
+            document.getElementById('cancelSerialBtn').addEventListener('click', closeSerialModal);
+            document.getElementById('confirmSerialBtn').addEventListener('click', confirmDesktopSerial);
+            document.getElementById('serialModal').addEventListener('click', function(e) {
+                if (e.target === this) closeSerialModal();
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') closeSerialModal();
+            });
+            window.addEventListener('pywebviewready', startSerialPolling);
+            if (isDesktopApp()) startSerialPolling();
+            document.getElementById('sendBtn').addEventListener('click', handleManualSend);
+            document.getElementById('manualInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleManualSend();
+                }
+            });
+
+            document.getElementById('relearnBtn').addEventListener('click', function() {
+                resetBaselineLearning();
+                // 如果当前是模拟模式，生成初始数据供学习
+                if (currentMode === 'sim' || currentMode === 'manual_free') {
+                    // 先停止所有定时器
+                    stopAllTimers();
+                    // 生成5个初始数据点触发学习
+                    for (let i = 0; i < 5; i++) {
+                        const baseVal = 120 + Math.round(Math.random() * 60);
+                        // 直接调用 receiveData，会触发学习
+                        receiveData(Math.max(100, Math.min(800, baseVal)));
+                    }
+                    // 重新启动定时器（如果是模拟模式）
+                    if (currentMode === 'sim') {
+                        startModeTimer();
+                    }
+                }
+                document.getElementById('statusBar').textContent = '🔄 重新学习基线...';
+                document.getElementById('statusBar').className = 'status-bar learning';
+            });
+
+            document.getElementById('modeBtn').addEventListener('click', function() {
+                if (currentMode === 'serial') {
+                    alert('请先点击「断开」按钮退出串口模式。');
+                    return;
+                }
+                if (currentMode === 'manual_free') {
+                    currentMode = 'sim';
+                    this.textContent = '📊 模拟';
+                    this.className = 'btn';
+                    modeLabel.textContent = '模式: 模拟';
+                    dataLog.textContent = '📡 切换到模拟数据生成模式';
+                    startModeTimer();
+                    statusDot.className = 'dot gray';
+                    statusText.textContent = '模拟模式';
+                    document.getElementById('statusBar').textContent = '📊 模拟模式';
+                    document.getElementById('statusBar').className = 'status-bar waiting';
+                    // 重置基线学习状态，重新学习
+                    resetBaselineLearning();
+                    // 生成初始数据
+                    for (let i = 0; i < 10; i++) {
+                        const baseVal = 120 + Math.round(Math.random() * 60);
+                        receiveData(Math.max(100, Math.min(800, baseVal)));
+                    }
+                    return;
+                }
+                if (currentMode === 'sim') {
+                    currentMode = 'manual_seq';
+                    this.textContent = '⏩ 预设序列';
+                    this.className = 'btn btn-warning';
+                    modeLabel.textContent = '模式: 预设序列';
+                    dataLog.textContent = '📡 播放预设刺激序列（自动循环）';
+                    startModeTimer();
+                    statusDot.className = 'dot gray';
+                    statusText.textContent = '预设序列';
+                    document.getElementById('statusBar').textContent = '⏩ 预设序列模式';
+                    document.getElementById('statusBar').className = 'status-bar waiting';
+                } else {
+                    currentMode = 'sim';
+                    this.textContent = '📊 模拟';
+                    this.className = 'btn';
+                    modeLabel.textContent = '模式: 模拟';
+                    dataLog.textContent = '📡 模拟数据生成中';
+                    startModeTimer();
+                    statusDot.className = 'dot gray';
+                    statusText.textContent = '模拟模式';
+                    document.getElementById('statusBar').textContent = '📊 模拟模式';
+                    document.getElementById('statusBar').className = 'status-bar waiting';
+                    // 重置基线学习状态，重新学习
+                    resetBaselineLearning();
+                    // 生成初始数据
+                    for (let i = 0; i < 10; i++) {
+                        const baseVal = 120 + Math.round(Math.random() * 60);
+                        receiveData(Math.max(100, Math.min(800, baseVal)));
+                    }
+                }
+            });
+
+            document.getElementById('pauseBtn').addEventListener('click', function() {
+                paused = !paused;
+                this.textContent = paused ? '▶ 继续' : '⏸ 暂停';
+                this.style.borderColor = paused ? '#eab308' : 'rgba(255,255,255,0.08)';
+                if (paused) {
+                    stopAlarm();
+                    statusText.textContent = '⏸ 已暂停';
+                    statusDot.className = 'dot gray';
+                    document.getElementById('statusBar').textContent = '⏸ 已暂停';
+                    document.getElementById('statusBar').className = 'status-bar waiting';
+                } else {
+                    statusText.textContent = currentMode === 'sim' ? '模拟模式' : (currentMode === 'manual_seq' ?
+                        '预设序列' : '手动自由');
+                    document.getElementById('statusBar').textContent = '▶ 继续监测';
+                    document.getElementById('statusBar').className = 'status-bar monitoring';
+                }
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                stopAlarm();
+                if (isBaselineReady && patientBaseline !== null) {
+                    // 保留基线，重置数据
+                    signalData = [];
+                    dataCount = 0;
+                    countDisplay.textContent = '0';
+                    if (trendChart) { trendChart.destroy();
+                        trendChart = null; }
+                    if (slopeChart) { slopeChart.destroy();
+                        slopeChart = null; }
+                    valDisplay.innerHTML = '-- <span class="unit">μV</span>';
+                    slopeDisplay.innerHTML = '-- <span class="unit">μV/步</span>';
+                    levelDisplay.textContent = '⚪ 等待数据';
+                    levelDisplay.style.color = '#94a3b8';
+                    warnIcon.textContent = '⏳';
+                    warnText.textContent = '已重置，等待新数据...';
+                    warningBox.style.background = 'rgba(255,255,255,0.03)';
+                    warningBox.style.borderColor = 'rgba(255,255,255,0.08)';
+                    warningBox.style.color = '#94a3b8';
+                    statusDot.className = 'dot gray';
+                    statusText.textContent = '已重置';
+                    dataLog.textContent = `📡 已重置，基线 ${patientBaseline} μV 保留`;
+                    document.getElementById('statusBar').textContent = `🔄 已重置 · 基线 ${patientBaseline} μV 保留`;
+                    document.getElementById('statusBar').className = 'status-bar ready';
+                    // 生成显示数据（不增加计数）
+                    generateDisplayData(10, patientBaseline);
+                    // 恢复计数显示为0
+                    countDisplay.textContent = '0';
+                    dataCount = 0;
+                } else {
+                    resetBaselineLearning();
+                    // 如果当前是模拟模式，生成初始数据
+                    if (currentMode === 'sim') {
+                        for (let i = 0; i < 10; i++) {
+                            const baseVal = 120 + Math.round(Math.random() * 60);
+                            receiveData(Math.max(100, Math.min(800, baseVal)));
+                        }
+                        dataCount = 0;
+                        countDisplay.textContent = '0';
+                    }
+                }
+
+                if (currentMode === 'manual_free') {
+                    currentMode = 'sim';
+                    document.getElementById('modeBtn').textContent = '📊 模拟';
+                    document.getElementById('modeBtn').className = 'btn';
+                    modeLabel.textContent = '模式: 模拟';
+                    startModeTimer();
+                }
+            });
+
+            warningBox.addEventListener('dblclick', function() {
+                document.getElementById('resetBtn').click();
+            });
+
+            // ============================================
+            // 10. 页面关闭时停止报警
+            // ============================================
+            window.addEventListener('beforeunload', function() {
+                stopAlarm();
+                stopAllTimers();
+                keepReading = false;
+                if (serialPort) {
+                    try { serialPort.close(); } catch (e) {}
+                }
+            });
+
+            // ============================================
+            // 11. 初始化
+            // ============================================
+            // 生成初始数据（同时触发基线学习）
+            for (let i = 0; i < 50; i++) {
+                const baseVal = 120 + Math.round(Math.random() * 80);
+                receiveData(Math.max(100, Math.min(800, baseVal)));
+            }
+            dataCount = 0;
+            countDisplay.textContent = '0';
+
+            startModeTimer();
+            modeLabel.textContent = '模式: 模拟';
+            updateBaselineUI();
+
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    if (signalData.length > 0) {
+                        const last = signalData[signalData.length - 1];
+                        let slope = 0;
+                        if (signalData.length >= 4) slope = (signalData[signalData.length - 1] - signalData[
+                            signalData.length - 4]) / 3;
+                        try { drawHeatmap(last, slope); } catch (e) {}
+                    }
+                }, 300);
+            });
+
+            console.log('✅ 甲韵康锐 自适应基线版 v2.3 已启动');
+            console.log('🧬 前20个有效数据点自动学习患者基线');
+            console.log('📊 警戒线 = 基线 × 4，危险线 = 基线 × 6');
+            console.log('💡 点击「重学」可重新学习基线');
+            console.log('🔌 点击「串口」连接真实设备');
+            console.log('✅ v2.3 修复：串口缓冲区、多数字提取、重置计数、状态条同步等');
+        })();
+    </script>
+</body>
+</html>
