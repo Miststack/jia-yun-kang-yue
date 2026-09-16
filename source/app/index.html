@@ -257,6 +257,44 @@
             color: #93c5fd;
             text-align: center;
         }
+        .session-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        .session-bar label { white-space: nowrap; }
+        .session-bar input[type="text"] {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #e0e6f0;
+            border-radius: 8px;
+            padding: 4px 8px;
+            width: 128px;
+            outline: none;
+        }
+        .session-bar input[type="range"] {
+            width: 90px;
+            vertical-align: middle;
+        }
+        .session-meta { color: #6b7a9f; margin-left: auto; }
+        .btn.large-on {
+            border-color: #a78bfa;
+            color: #c4b5fd;
+        }
+        body.large-ui .stat-value { font-size: 34px !important; }
+        body.large-ui .warning-box { font-size: 26px; }
+        body.large-ui .btn { font-size: 14px; padding: 8px 16px; }
+        body.large-ui .status-bar { font-size: 22px; }
+        body.large-ui .session-bar input[type="text"] { font-size: 16px; width: 160px; }
+        body.large-ui .event-log { font-size: 15px; max-height: 160px; }
         .event-log {
             max-height: 120px;
             overflow-y: auto;
@@ -557,6 +595,7 @@
                     <button class="btn-send" id="sendBtn">发送</button>
                 </div>
                 <button class="btn btn-success" id="connectBtn">🔌 串口</button>
+                <button class="btn btn-success" id="quickConnectBtn" style="display:none;">⚡ 上次</button>
                 <button class="btn" id="disconnectBtn" style="display:none;">⛔ 断开</button>
                 <button class="btn" id="modeBtn">📊 模拟</button>
                 <button class="btn" id="pauseBtn">⏸ 暂停</button>
@@ -571,6 +610,19 @@
 
         <div class="status-bar waiting" id="statusBar">⏳ 等待信号接入...</div>
         <div class="pause-banner" id="pauseBanner">⏸ 已暂停 · 空格继续</div>
+        <div class="session-bar" id="sessionBar">
+            <label for="caseIdInput" id="labelCase">记录号</label>
+            <input type="text" id="caseIdInput" maxlength="40" placeholder="可选" autocomplete="off">
+            <label for="noteInput" id="labelNote">备注</label>
+            <input type="text" id="noteInput" maxlength="80" placeholder="可选" autocomplete="off">
+            <label for="volumeSlider" id="labelVolume">音量</label>
+            <input type="range" id="volumeSlider" min="0" max="100" value="70">
+            <button class="btn" id="largeUiBtn">大字</button>
+            <button class="btn" id="markerBtn">打点</button>
+            <button class="btn" id="shotBtn">截图</button>
+            <button class="btn" id="folderBtn">记录夹</button>
+            <span class="session-meta" id="sinceAlertDisplay">距上次预警 --</span>
+        </div>
 
         <div class="stats-grid">
             <div class="stat-card">
@@ -674,6 +726,7 @@
             <div class="modal-actions">
                 <button class="btn" id="refreshPortsBtn">刷新</button>
                 <button class="btn" id="cancelSerialBtn">取消</button>
+                <button class="btn" id="lastSerialBtn">连接上次</button>
                 <button class="btn btn-success" id="confirmSerialBtn">连接</button>
             </div>
         </div>
@@ -685,6 +738,10 @@
             <p><kbd>空格</kbd>暂停 / 继续</p>
             <p><kbd>M</kbd>静音 / 恢复声音</p>
             <p><kbd>S</kbd>导出本段 CSV</p>
+            <p><kbd>K</kbd>人工打点</p>
+            <p><kbd>C</kbd>复制当前值</p>
+            <p><kbd>G</kbd>导出波形截图</p>
+            <p><kbd>L</kbd>大字模式</p>
             <p><kbd>P</kbd>窗口置顶（仅桌面）</p>
             <p><kbd>F11</kbd>全屏</p>
             <p><kbd>?</kbd>打开 / 关闭本说明</p>
@@ -753,6 +810,12 @@
                 document.getElementById('exportBtn').textContent = '📥 ' + (C.labels.export || '导出');
                 document.getElementById('pauseBanner').textContent = '⏸ ' + (C.labels.pause_banner || '已暂停 · 空格继续');
                 document.getElementById('helpTitle').textContent = C.labels.help_title || '快捷键';
+                document.getElementById('labelCase').textContent = C.labels.case_id || '记录号';
+                document.getElementById('labelNote').textContent = C.labels.note || '备注';
+                document.getElementById('labelVolume').textContent = C.labels.volume || '音量';
+                document.getElementById('markerBtn').textContent = C.labels.marker || '打点';
+                document.getElementById('shotBtn').textContent = C.labels.screenshot || '截图';
+                document.getElementById('folderBtn').textContent = C.labels.records_folder || '记录夹';
                 document.getElementById('heatmapTitle').textContent = '🔥 ' + C.labels.heatmap;
                 document.getElementById('waveformTitle').textContent = '📈 ' + C.labels.waveform;
                 document.getElementById('slopeChartTitle').textContent = '📊 ' + C.labels.slope_chart;
@@ -820,6 +883,11 @@
             let sessionRecords = [];
             let sessionEvents = [];
             let staleLatched = false;
+            let lastAlertAt = 0;
+            let dirtySinceExport = false;
+            let largeUi = false;
+            let alarmVolume = Math.max(0, Math.min(1, (C.alarm && C.alarm.volume != null) ? C.alarm.volume : 0.7));
+            let titleBlinkTimer = null;
 
             let manualIndex = 0;
             const manualData = C.simulation.preset_sequence.slice();
@@ -845,7 +913,8 @@
                     gain.connect(audioCtx.destination);
                     osc.frequency.value = frequency;
                     osc.type = 'square';
-                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    const vol = Math.max(0.0001, 0.3 * Math.max(0, Math.min(1, alarmVolume)));
+                    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
                     osc.start(audioCtx.currentTime);
                     osc.stop(audioCtx.currentTime + duration);
@@ -853,8 +922,11 @@
             }
 
             function startAlarm(level) {
-                if (alarmMuted) {
-                    stopAlarm();
+                if (level === 'red') setTitleBlink(true);
+                else setTitleBlink(false);
+                if (alarmMuted || alarmVolume <= 0) {
+                    isAlarmPlaying = false;
+                    if (alarmTimer) { clearInterval(alarmTimer); alarmTimer = null; }
                     return;
                 }
                 initAudio();
@@ -865,21 +937,39 @@
                     alarmTimer = null; }
                 if (level === 'red') {
                     isAlarmPlaying = true;
+                    setTitleBlink(true);
                     playBeep(C.alarm.danger_hz, C.alarm.danger_beep_s);
                     alarmTimer = setInterval(() => { if (isAlarmPlaying) playBeep(C.alarm.danger_hz, C.alarm.danger_beep_s); }, C.alarm.danger_interval_ms);
                 } else if (level === 'yellow') {
                     isAlarmPlaying = true;
+                    setTitleBlink(false);
                     playBeep(C.alarm.warn_hz, C.alarm.warn_beep_s);
                     alarmTimer = setInterval(() => { if (isAlarmPlaying) playBeep(C.alarm.warn_hz, C.alarm.warn_beep_s); }, C.alarm.warn_interval_ms);
                 } else {
+                    setTitleBlink(false);
                     stopAlarm();
                 }
             }
 
             function stopAlarm() {
                 isAlarmPlaying = false;
+                setTitleBlink(false);
                 if (alarmTimer) { clearInterval(alarmTimer);
                     alarmTimer = null; }
+            }
+
+            function setTitleBlink(on) {
+                if (on) {
+                    if (titleBlinkTimer) return;
+                    const base = C.branding.app_name || document.title;
+                    titleBlinkTimer = setInterval(function() {
+                        document.title = document.title.indexOf('⚠') === 0 ? base : ('⚠ ' + base);
+                    }, 700);
+                } else if (titleBlinkTimer) {
+                    clearInterval(titleBlinkTimer);
+                    titleBlinkTimer = null;
+                    document.title = C.branding.app_name;
+                }
             }
 
             function formatElapsed(ms) {
@@ -953,6 +1043,113 @@
                 document.getElementById('helpOverlay').classList.remove('show');
             }
 
+            function applyLargeUi() {
+                const btn = document.getElementById('largeUiBtn');
+                if (largeUi) {
+                    document.body.classList.add('large-ui');
+                    btn.textContent = C.labels.large_off || '已大字';
+                    btn.classList.add('large-on');
+                } else {
+                    document.body.classList.remove('large-ui');
+                    btn.textContent = C.labels.large_on || '大字';
+                    btn.classList.remove('large-on');
+                }
+                try { localStorage.setItem('jyky_large', largeUi ? '1' : '0'); } catch (e) {}
+            }
+
+            function applyVolumeUi() {
+                document.getElementById('volumeSlider').value = String(Math.round(alarmVolume * 100));
+            }
+
+            function refreshQuickConnect() {
+                const prefs = loadSerialPrefs();
+                const btn = document.getElementById('quickConnectBtn');
+                const lastBtn = document.getElementById('lastSerialBtn');
+                const show = !!(prefs.port && currentMode !== 'serial');
+                btn.style.display = show ? 'inline-block' : 'none';
+                btn.title = prefs.port ? ('连接 ' + prefs.port) : '';
+                btn.textContent = '⚡ ' + (C.labels.quick_connect || '上次') + (prefs.port ? (' ' + prefs.port) : '');
+                if (lastBtn) lastBtn.style.display = prefs.port ? 'inline-block' : 'none';
+            }
+
+            function addManualMarker() {
+                const last = signalData.length ? signalData[signalData.length - 1] : null;
+                const text = (C.labels.marked || '人工标记') + (last != null ? ('  ' + Math.round(last) + UNIT) : '');
+                pushEvent('info', text);
+                if (sessionRecords.length) {
+                    const rec = sessionRecords[sessionRecords.length - 1];
+                    rec.event = rec.event ? (rec.event + ';标记') : '标记';
+                }
+                dirtySinceExport = true;
+            }
+
+            async function copyCurrentValue() {
+                const last = signalData.length ? Math.round(signalData[signalData.length - 1]) : '';
+                const level = (document.getElementById('levelDisplay').textContent || '').replace(/[🔴🟡🔵🟢⚪]\s*/, '');
+                const text = [last ? (last + ' ' + UNIT) : '', level].filter(Boolean).join('  ');
+                if (!text) return;
+                try {
+                    await navigator.clipboard.writeText(text);
+                    dataLog.textContent = '📋 ' + (C.labels.copied || '已复制当前值') + '  ' + text;
+                } catch (e) {
+                    window.prompt('复制当前值', text);
+                }
+            }
+
+            async function exportScreenshot() {
+                if (!trendChart) {
+                    alert('还没有波形可截图。');
+                    return;
+                }
+                const dataUrl = trendChart.toBase64Image('image/png', 1);
+                const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const caseId = (document.getElementById('caseIdInput').value || '').trim().replace(/[\\/:*?"<>|]/g, '_');
+                const filename = (C.branding.short_name || '监测波形') + (caseId ? ('_' + caseId) : '') + '_' + stamp + '.png';
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = filename;
+                a.click();
+                if (typeof window.pywebview !== 'undefined' && window.pywebview.api && window.pywebview.api.save_image_file) {
+                    try {
+                        const saved = await window.pywebview.api.save_image_file(filename, dataUrl);
+                        if (saved && saved.path) {
+                            dataLog.textContent = '🖼 ' + (C.labels.saved || '已保存到记录夹') + '  ' + saved.path;
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            async function openRecordsFolder() {
+                if (typeof window.pywebview === 'undefined' || !window.pywebview.api || !window.pywebview.api.open_records_folder) {
+                    alert('记录夹仅桌面软件可用。导出的 CSV / 截图会同时存到「文档」里。');
+                    return;
+                }
+                await window.pywebview.api.open_records_folder();
+            }
+
+            async function connectLastSerial() {
+                const prefs = loadSerialPrefs();
+                if (!prefs.port) {
+                    openSerialModal();
+                    return;
+                }
+                if (typeof window.pywebview === 'undefined' || !window.pywebview.api) {
+                    openSerialModal();
+                    return;
+                }
+                const baud = prefs.baud || C.serial.default_baud || 9600;
+                const result = await window.pywebview.api.connect_serial(prefs.port, baud);
+                if (!result || !result.ok) {
+                    alert('连接上次端口失败：' + ((result && result.error) || '未知错误') + '\n请改用「串口」手动选择。');
+                    openSerialModal();
+                    return;
+                }
+                closeSerialModal();
+                saveSerialPrefs(prefs.port, baud);
+                markSerialConnected(prefs.port);
+                refreshQuickConnect();
+            }
+
             async function setWindowOnTop(enabled) {
                 windowOnTop = !!enabled;
                 try { localStorage.setItem('jyky_ontop', windowOnTop ? '1' : '0'); } catch (e) {}
@@ -987,11 +1184,14 @@
                 warnHits = 0;
                 dangerHits = 0;
                 staleLatched = false;
+                lastAlertAt = 0;
+                dirtySinceExport = false;
                 sessionRecords = [];
                 sessionEvents = [];
                 document.getElementById('peakDisplay').innerHTML = `-- <span class="unit">${UNIT}</span>`;
                 document.getElementById('valleyDisplay').innerHTML = `-- <span class="unit">${UNIT}</span>`;
                 document.getElementById('rateDisplay').textContent = '-- Hz';
+                document.getElementById('sinceAlertDisplay').textContent = (C.labels.since_alert || '距上次预警') + ' --';
                 updateEventTitle();
                 renderEventLog();
             }
@@ -1029,22 +1229,36 @@
                 if (alarmMuted) {
                     btn.textContent = '🔇 ' + (C.labels.mute_off || '已静音');
                     btn.classList.add('muted');
-                    stopAlarm();
+                    isAlarmPlaying = false;
+                    if (alarmTimer) { clearInterval(alarmTimer); alarmTimer = null; }
                 } else {
                     btn.textContent = '🔊 ' + (C.labels.mute_on || '声音');
                     btn.classList.remove('muted');
                 }
             }
 
-            function exportCsv() {
-                if (!sessionRecords.length && !sessionEvents.length) {
-                    alert(C.labels.export_empty || '本段还没有可导出的数据。');
-                    return;
-                }
+            function csvCell(v) {
+                const s = String(v == null ? '' : v);
+                if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+                return s;
+            }
+
+            function csvFileName() {
+                const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const caseId = (document.getElementById('caseIdInput').value || '').trim();
+                const prefix = (C.branding.short_name || '监测记录') + (caseId ? ('_' + caseId.replace(/[\\/:*?"<>|]/g, '_')) : '');
+                return prefix + '_' + stamp + '.csv';
+            }
+
+            function buildCsvText() {
+                const caseId = (document.getElementById('caseIdInput').value || '').trim();
+                const note = (document.getElementById('noteInput').value || '').trim();
                 const summary = [
-                    '# 产品,' + (C.branding.app_name || ''),
-                    '# 版本,' + (C.branding.version || ''),
-                    '# 导出时间,' + new Date().toLocaleString(),
+                    '# 产品,' + csvCell(C.branding.app_name || ''),
+                    '# 版本,' + csvCell(C.branding.version || ''),
+                    '# 记录号,' + csvCell(caseId),
+                    '# 备注,' + csvCell(note),
+                    '# 导出时间,' + csvCell(new Date().toLocaleString()),
                     '# 监测时长,' + formatElapsed(sessionElapsedMs()),
                     '# 峰值,' + (sessionPeak != null ? Math.round(sessionPeak) : ''),
                     '# 最低,' + (sessionValley != null ? Math.round(sessionValley) : ''),
@@ -1056,21 +1270,56 @@
                 ].join('\n');
                 const header = '时间,序号,数值,斜率,等级,基线,事件\n';
                 const rows = sessionRecords.map(function(r) {
-                    return [r.time, r.index, r.value, r.slope, r.level, r.baseline, r.event || ''].join(',');
+                    return [r.time, r.index, r.value, r.slope, csvCell(r.level), r.baseline, csvCell(r.event || '')].join(',');
                 });
                 const eventLines = ['', '预警事件', '时间,内容'].concat(
-                    sessionEvents.map(function(ev) { return ev.text.replace(/\s{2,}/, ','); })
+                    sessionEvents.map(function(ev) { return csvCell(ev.text.replace(/\s{2,}/, ',')); })
                 );
-                const blob = new Blob(['\ufeff' + summary + header + rows.join('\n') + '\n' + eventLines.join('\n')], {
-                    type: 'text/csv;charset=utf-8'
-                });
+                return summary + header + rows.join('\n') + '\n' + eventLines.join('\n');
+            }
+
+            async function saveCsvToRecords(text, filename) {
+                if (typeof window.pywebview === 'undefined' || !window.pywebview.api || !window.pywebview.api.save_text_file) {
+                    return null;
+                }
+                try {
+                    return await window.pywebview.api.save_text_file(filename, text);
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function downloadText(filename, text) {
+                const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' });
                 const a = document.createElement('a');
-                const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
                 a.href = URL.createObjectURL(blob);
-                a.download = (C.branding.short_name || '监测记录') + '_' + stamp + '.csv';
+                a.download = filename;
                 a.click();
                 URL.revokeObjectURL(a.href);
             }
+
+            async function exportCsv() {
+                if (!sessionRecords.length && !sessionEvents.length) {
+                    alert(C.labels.export_empty || '本段还没有可导出的数据。');
+                    return;
+                }
+                const filename = csvFileName();
+                const text = buildCsvText();
+                downloadText(filename, text);
+                const saved = await saveCsvToRecords(text, filename);
+                dirtySinceExport = false;
+                if (saved && saved.path) {
+                    dataLog.textContent = '💾 ' + (C.labels.saved || '已保存到记录夹') + '  ' + saved.path;
+                }
+            }
+
+            window.__csvSnapshot = function() {
+                if (!sessionRecords.length && !sessionEvents.length) return null;
+                return { name: csvFileName(), text: buildCsvText() };
+            };
+            window.__hasUnsaved = function() {
+                return dirtySinceExport && (sessionRecords.length > 0 || sessionEvents.length > 0);
+            };
 
             function loadSerialPrefs() {
                 try {
@@ -1285,12 +1534,19 @@
                     }
 
                     const ctx = document.getElementById('trendChart').getContext('2d');
+                    const th = getAdaptiveThresholds();
+                    const showTh = uiCfg().show_threshold_lines !== false;
+                    const fillN = function(v) {
+                        const arr = [];
+                        for (let i = 0; i < data.length; i++) arr.push(v);
+                        return arr;
+                    };
                     trendChart = new Chart(ctx, {
                         type: 'line',
                         data: {
                             labels: xLabels,
                             datasets: [{
-                                label: '实时肌电值',
+                                label: '实时值',
                                 data: data,
                                 borderColor: '#3b82f6',
                                 borderWidth: 2,
@@ -1317,13 +1573,50 @@
                                 pointBackgroundColor: '#ef4444',
                                 fill: false,
                                 labels: fx
+                            }, {
+                                label: '警戒线',
+                                data: fillN(th.safe),
+                                borderColor: 'rgba(234,179,8,0.8)',
+                                borderDash: [6, 4],
+                                borderWidth: 1.5,
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0,
+                                hidden: !showTh
+                            }, {
+                                label: '危险线',
+                                data: fillN(th.risk),
+                                borderColor: 'rgba(239,68,68,0.75)',
+                                borderDash: [4, 4],
+                                borderWidth: 1.5,
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0,
+                                hidden: !showTh
+                            }, {
+                                label: '基线',
+                                data: fillN(patientBaseline != null ? patientBaseline : NaN),
+                                borderColor: 'rgba(168,85,247,0.75)',
+                                borderDash: [2, 4],
+                                borderWidth: 1,
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0,
+                                hidden: !showTh || patientBaseline == null
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: {
-                                legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 10 } } }
+                                legend: {
+                                    labels: {
+                                        color: '#94a3b8',
+                                        boxWidth: 10,
+                                        font: { size: 10 },
+                                        filter: function(item) { return item.text !== '上升速度'; }
+                                    }
+                                }
                             },
                             scales: {
                                 x: { display: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#6b7a9f',
@@ -1370,7 +1663,7 @@
                         return;
                     }
 
-                    if (!trendChart || !slopeChart) {
+                    if (!trendChart || !slopeChart || trendChart.data.datasets.length < 6) {
                         initCharts(data);
                         return;
                     }
@@ -1407,6 +1700,19 @@
                         trendChart.data.datasets[2].data = [];
                         trendChart.data.datasets[2].labels = [];
                     }
+                    const th = getAdaptiveThresholds();
+                    const showTh = uiCfg().show_threshold_lines !== false;
+                    const fillN = function(v) {
+                        const arr = [];
+                        for (let i = 0; i < data.length; i++) arr.push(v);
+                        return arr;
+                    };
+                    trendChart.data.datasets[3].data = fillN(th.safe);
+                    trendChart.data.datasets[3].hidden = !showTh;
+                    trendChart.data.datasets[4].data = fillN(th.risk);
+                    trendChart.data.datasets[4].hidden = !showTh;
+                    trendChart.data.datasets[5].data = fillN(patientBaseline != null ? patientBaseline : NaN);
+                    trendChart.data.datasets[5].hidden = !showTh || patientBaseline == null;
                     trendChart.update('none');
 
                     const slopes = [];
@@ -1549,8 +1855,10 @@
                     updateEventTitle();
                     pushEvent(levelKey === 'red' ? 'danger' : 'warn',
                         recEvent + '  ' + Math.round(currentVal) + UNIT);
+                    lastAlertAt = Date.now();
                 }
                 lastAlertLevel = levelKey;
+                dirtySinceExport = true;
                 sessionRecords.push({
                     time: formatClock(new Date()),
                     index: dataCount,
@@ -1738,6 +2046,7 @@
                 document.getElementById('statusBar').textContent = '🔌 串口已连接，等待数据...';
                 document.getElementById('statusBar').className = 'status-bar waiting';
                 pushEvent('info', '已连接串口' + (portName ? ('  ' + portName) : ''));
+                refreshQuickConnect();
             }
 
             function openSerialModal() {
@@ -1887,6 +2196,7 @@
                 document.getElementById('statusBar').className = 'status-bar waiting';
                 stopAlarm();
                 pushEvent('info', '已断开串口，切换模拟');
+                refreshQuickConnect();
             }
 
             function startSerialPolling() {
@@ -1910,6 +2220,8 @@
             // 9. 按钮绑定
             // ============================================
             document.getElementById('connectBtn').addEventListener('click', handleConnectClick);
+            document.getElementById('quickConnectBtn').addEventListener('click', connectLastSerial);
+            document.getElementById('lastSerialBtn').addEventListener('click', connectLastSerial);
             document.getElementById('disconnectBtn').addEventListener('click', disconnectSerial);
             document.getElementById('refreshPortsBtn').addEventListener('click', refreshPortList);
             document.getElementById('cancelSerialBtn').addEventListener('click', closeSerialModal);
@@ -1934,6 +2246,14 @@
                     exportCsv();
                 } else if (e.key === 'p' || e.key === 'P') {
                     document.getElementById('pinBtn').click();
+                } else if (e.key === 'k' || e.key === 'K') {
+                    addManualMarker();
+                } else if (e.key === 'c' || e.key === 'C') {
+                    copyCurrentValue();
+                } else if (e.key === 'g' || e.key === 'G') {
+                    exportScreenshot();
+                } else if (e.key === 'l' || e.key === 'L') {
+                    document.getElementById('largeUiBtn').click();
                 } else if (e.key === 'F11') {
                     e.preventDefault();
                     toggleFullscreen();
@@ -1977,6 +2297,17 @@
                 }
             });
             document.getElementById('exportBtn').addEventListener('click', exportCsv);
+            document.getElementById('markerBtn').addEventListener('click', addManualMarker);
+            document.getElementById('shotBtn').addEventListener('click', exportScreenshot);
+            document.getElementById('folderBtn').addEventListener('click', openRecordsFolder);
+            document.getElementById('largeUiBtn').addEventListener('click', function() {
+                largeUi = !largeUi;
+                applyLargeUi();
+            });
+            document.getElementById('volumeSlider').addEventListener('input', function() {
+                alarmVolume = Math.max(0, Math.min(1, parseInt(this.value, 10) / 100));
+                try { localStorage.setItem('jyky_vol', String(alarmVolume)); } catch (e) {}
+            });
             document.getElementById('pinBtn').addEventListener('click', function() {
                 if (typeof window.pywebview === 'undefined') {
                     alert('窗口置顶仅桌面软件可用。');
@@ -2179,15 +2510,27 @@
             resetSessionExtras();
             const prefs0 = loadSerialPrefs();
             alarmMuted = !!prefs0.mute;
+            try {
+                const savedVol = parseFloat(localStorage.getItem('jyky_vol') || '');
+                if (!isNaN(savedVol)) alarmVolume = Math.max(0, Math.min(1, savedVol));
+                if (localStorage.getItem('jyky_large') === '1' || uiCfg().large_ui_default) largeUi = true;
+            } catch (e) {}
             applyMuteUi();
             applyPinUi();
             applyPauseUi();
+            applyLargeUi();
+            applyVolumeUi();
+            refreshQuickConnect();
             setInterval(function() {
                 const now = new Date();
                 document.getElementById('clockDisplay').textContent = formatClock(now);
                 document.getElementById('durationDisplay').textContent = formatElapsed(sessionElapsedMs());
                 const hz = currentRateHz();
                 document.getElementById('rateDisplay').textContent = (hz ? hz.toFixed(1) : '--') + ' Hz';
+                if (lastAlertAt) {
+                    document.getElementById('sinceAlertDisplay').textContent =
+                        (C.labels.since_alert || '距上次预警') + '  ' + formatElapsed(now.getTime() - lastAlertAt);
+                }
                 const staleMs = uiCfg().stale_ms == null ? 3000 : uiCfg().stale_ms;
                 const bar = document.getElementById('statusBar');
                 if (currentMode === 'serial' && !paused && lastPacketAt && staleMs > 0 &&
@@ -2202,6 +2545,16 @@
                     bar.className = 'status-bar stale';
                 }
             }, 1000);
+            const autoMin = uiCfg().auto_save_minutes == null ? 2 : uiCfg().auto_save_minutes;
+            if (autoMin > 0) {
+                setInterval(async function() {
+                    if (!dirtySinceExport) return;
+                    if (!sessionRecords.length && !sessionEvents.length) return;
+                    const filename = 'auto_' + csvFileName();
+                    const saved = await saveCsvToRecords(buildCsvText(), filename);
+                    if (saved && saved.ok) dirtySinceExport = false;
+                }, Math.max(1, autoMin) * 60 * 1000);
+            }
             document.getElementById('clockDisplay').textContent = formatClock(new Date());
 
             startModeTimer();

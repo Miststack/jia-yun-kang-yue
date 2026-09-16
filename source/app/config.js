@@ -129,7 +129,9 @@ window.APP_CONFIG = {
     "danger_interval_ms": 300,
     "warn_hz": 600,
     "warn_beep_s": 0.2,
-    "warn_interval_ms": 1000
+    "warn_interval_ms": 1000,
+    "volume": 0.7,
+    "volume_说明": "提示音默认响度 0～1，界面音量条可再调，会记住"
   },
   "ui": {
     "说明": "界面辅助功能，不改变预警算法和阈值。",
@@ -142,7 +144,19 @@ window.APP_CONFIG = {
     "rate_window_s": 10,
     "rate_window_s_说明": "刷新率按最近多少秒的数据包估算。",
     "on_top_default": false,
-    "on_top_default_说明": "桌面窗口启动时是否置顶。也可在界面用「置顶」或快捷键 P 切换。"
+    "on_top_default_说明": "桌面窗口启动时是否置顶。也可在界面用「置顶」或快捷键 P 切换。",
+    "show_threshold_lines": true,
+    "show_threshold_lines_说明": "波形上画出警戒线、危险线和基线，方便对照，不改变判定。",
+    "auto_save_on_close": true,
+    "auto_save_on_close_说明": "关闭窗口时把本段 CSV 存到「文档」里的记录夹。",
+    "auto_save_minutes": 2,
+    "auto_save_minutes_说明": "监测过程中每隔几分钟自动存一份。0 表示关闭定时保存。",
+    "confirm_close": false,
+    "confirm_close_说明": "关闭前是否再确认一次。默认关掉，避免术中误挡。",
+    "large_ui_default": false,
+    "large_ui_default_说明": "启动时是否用大字。也可点「大字」或按 L。",
+    "remember_window": true,
+    "remember_window_说明": "记住桌面窗口宽高，下次按上次大小打开。"
   },
   "labels": {
     "说明": "界面上能看到的标题文字。改这里就能把「肌电」换成「压力」等，不必改 index.html。footer_interval 里的 {interval}、footer_hint 里的 {count} 会自动替换。",
@@ -173,6 +187,19 @@ window.APP_CONFIG = {
     "stale_text": "串口超过{seconds}秒没有新数据，请检查设备连接",
     "export_empty": "本段还没有可导出的数据。",
     "help_title": "快捷键",
-    "event_empty": "暂无警戒/危险事件。越线时会记录在这里，可一并导出。"
+    "event_empty": "暂无警戒/危险事件。越线时会记录在这里，可一并导出。",
+    "case_id": "记录号",
+    "note": "备注",
+    "volume": "音量",
+    "large_on": "大字",
+    "large_off": "已大字",
+    "marker": "打点",
+    "screenshot": "截图",
+    "records_folder": "记录夹",
+    "quick_connect": "上次",
+    "since_alert": "距上次预警",
+    "copied": "已复制当前值",
+    "marked": "人工标记",
+    "saved": "已保存到记录夹"
   }
 };

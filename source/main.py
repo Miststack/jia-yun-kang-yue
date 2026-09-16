@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
+import base64
 import json
+import os
 import queue
 import re
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -26,6 +29,38 @@ def app_dir() -> Path:
 def load_config() -> dict:
     path = app_dir() / "app" / "config.json"
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def user_state_dir(short_name: str) -> Path:
+    root = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local"))
+    path = root / short_name
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def records_dir(short_name: str) -> Path:
+    path = Path.home() / "Documents" / f"{short_name}监测记录"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def load_window_bounds(short_name: str) -> dict | None:
+    path = user_state_dir(short_name) / "window.json"
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def save_window_bounds(short_name: str, width: int, height: int) -> None:
+    path = user_state_dir(short_name) / "window.json"
+    path.write_text(
+        json.dumps({"width": int(width), "height": int(height)}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 class SerialWorker:
@@ -118,9 +153,10 @@ class SerialWorker:
 
 
 class Api:
-    def __init__(self, worker: SerialWorker) -> None:
+    def __init__(self, worker: SerialWorker, short_name: str) -> None:
         self.worker = worker
         self.window = None
+        self.short_name = short_name
 
     def list_ports(self):
         return self.worker.list_ports()
@@ -147,6 +183,36 @@ class Api:
             self.window.toggle_fullscreen()
         return {"ok": True}
 
+    def save_text_file(self, filename, content):
+        name = Path(str(filename or "监测记录.csv")).name
+        path = records_dir(self.short_name) / name
+        path.write_text(str(content or ""), encoding="utf-8-sig")
+        return {"ok": True, "path": str(path)}
+
+    def save_image_file(self, filename, data_url):
+        name = Path(str(filename or "波形.png")).name
+        raw = str(data_url or "")
+        if "," in raw:
+            raw = raw.split(",", 1)[1]
+        path = records_dir(self.short_name) / name
+        path.write_bytes(base64.b64decode(raw))
+        return {"ok": True, "path": str(path)}
+
+    def open_records_folder(self):
+        path = records_dir(self.short_name)
+        try:
+            os.startfile(str(path))  # type: ignore[attr-defined]
+        except Exception:
+            subprocess.Popen(["explorer", str(path)])
+        return {"ok": True, "path": str(path)}
+
+    def save_window_size(self, width, height):
+        try:
+            save_window_bounds(self.short_name, int(width), int(height))
+        except Exception:
+            return {"ok": False}
+        return {"ok": True}
+
 
 def main() -> None:
     cfg = load_config()
@@ -162,17 +228,27 @@ def main() -> None:
     brand = cfg.get("branding", {})
     win = cfg.get("window", {})
     serial_cfg = cfg.get("serial", {})
+    ui_cfg = cfg.get("ui") or {}
+    short_name = brand.get("short_name") or "监测系统"
     worker = SerialWorker(read_timeout=float(serial_cfg.get("read_timeout", 0.05)))
-    api = Api(worker)
+    api = Api(worker, short_name)
     index = app_dir() / "app" / "index.html"
     if not index.exists():
         raise FileNotFoundError(f"找不到界面文件: {index}")
 
+    width = int(win.get("width", 1480))
+    height = int(win.get("height", 940))
+    if ui_cfg.get("remember_window", True):
+        saved = load_window_bounds(short_name)
+        if saved:
+            width = max(int(win.get("min_width", 1080)), int(saved.get("width") or width))
+            height = max(int(win.get("min_height", 720)), int(saved.get("height") or height))
+
     window = webview.create_window(
         brand.get("app_name", "监测与预警系统"),
         str(index),
-        width=int(win.get("width", 1480)),
-        height=int(win.get("height", 940)),
+        width=width,
+        height=height,
         min_size=(int(win.get("min_width", 1080)), int(win.get("min_height", 720))),
         js_api=api,
         background_color=win.get("background", "#0a0d1a"),
@@ -180,8 +256,50 @@ def main() -> None:
         maximized=False,
     )
     api.window = window
-    if bool((cfg.get("ui") or {}).get("on_top_default", False)):
+    if bool(ui_cfg.get("on_top_default", False)):
         window.on_top = True
+
+    def on_resized(*args):
+        if not ui_cfg.get("remember_window", True):
+            return
+        try:
+            w = args[0] if len(args) >= 1 else getattr(window, "width", None)
+            h = args[1] if len(args) >= 2 else getattr(window, "height", None)
+            if w and h:
+                save_window_bounds(short_name, int(w), int(h))
+        except Exception:
+            pass
+
+    def on_closing():
+        try:
+            if ui_cfg.get("auto_save_on_close", True):
+                snap = window.evaluate_js(
+                    "window.__csvSnapshot ? JSON.stringify(window.__csvSnapshot()) : null"
+                )
+                if snap:
+                    payload = json.loads(snap) if isinstance(snap, str) else snap
+                    if payload and payload.get("text"):
+                        api.save_text_file(payload.get("name") or "autosave.csv", payload["text"])
+            if ui_cfg.get("confirm_close"):
+                dirty = window.evaluate_js(
+                    "window.__hasUnsaved ? !!window.__hasUnsaved() : false"
+                )
+                if dirty:
+                    ok = window.evaluate_js('confirm("还有本段数据。关闭前已尝试保存到记录夹。确定关闭？")')
+                    if ok is False or ok == "false":
+                        return False
+        except Exception:
+            pass
+        return True
+
+    try:
+        window.events.resized += on_resized
+    except Exception:
+        pass
+    try:
+        window.events.closing += on_closing
+    except Exception:
+        pass
     window.events.closed += worker.disconnect
 
     debug = "--debug" in sys.argv
