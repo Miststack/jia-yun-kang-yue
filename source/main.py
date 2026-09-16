@@ -120,6 +120,7 @@ class SerialWorker:
 class Api:
     def __init__(self, worker: SerialWorker) -> None:
         self.worker = worker
+        self.window = None
 
     def list_ports(self):
         return self.worker.list_ports()
@@ -135,6 +136,16 @@ class Api:
 
     def poll_serial(self):
         return self.worker.poll()
+
+    def set_on_top(self, enabled=True):
+        if self.window is not None:
+            self.window.on_top = bool(enabled)
+        return {"ok": True, "on_top": bool(enabled)}
+
+    def toggle_fullscreen(self):
+        if self.window is not None:
+            self.window.toggle_fullscreen()
+        return {"ok": True}
 
 
 def main() -> None:
@@ -152,6 +163,7 @@ def main() -> None:
     win = cfg.get("window", {})
     serial_cfg = cfg.get("serial", {})
     worker = SerialWorker(read_timeout=float(serial_cfg.get("read_timeout", 0.05)))
+    api = Api(worker)
     index = app_dir() / "app" / "index.html"
     if not index.exists():
         raise FileNotFoundError(f"找不到界面文件: {index}")
@@ -162,11 +174,14 @@ def main() -> None:
         width=int(win.get("width", 1480)),
         height=int(win.get("height", 940)),
         min_size=(int(win.get("min_width", 1080)), int(win.get("min_height", 720))),
-        js_api=Api(worker),
+        js_api=api,
         background_color=win.get("background", "#0a0d1a"),
         text_select=True,
         maximized=False,
     )
+    api.window = window
+    if bool((cfg.get("ui") or {}).get("on_top_default", False)):
+        window.on_top = True
     window.events.closed += worker.disconnect
 
     debug = "--debug" in sys.argv

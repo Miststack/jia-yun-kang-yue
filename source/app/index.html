@@ -183,8 +183,92 @@
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 14px;
+            margin-bottom: 12px;
+        }
+        .stats-extra {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
             margin-bottom: 20px;
         }
+        .stats-extra .stat-value {
+            font-size: 22px;
+        }
+        .btn.muted {
+            border-color: #eab308;
+            color: #eab308;
+        }
+        .btn.pinned {
+            border-color: #60a5fa;
+            color: #60a5fa;
+        }
+        .pause-banner {
+            display: none;
+            margin-bottom: 12px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+            letter-spacing: 0.04em;
+            color: #facc15;
+            background: rgba(234, 179, 8, 0.12);
+            border: 1px solid rgba(234, 179, 8, 0.35);
+        }
+        .pause-banner.show { display: block; }
+        .status-bar.stale {
+            background: rgba(249, 115, 22, 0.12);
+            border-color: rgba(249, 115, 22, 0.35);
+            color: #fb923c;
+        }
+        .help-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(4, 8, 18, 0.72);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-overlay.show { display: flex; }
+        .help-card {
+            width: min(420px, 90vw);
+            background: #121a2c;
+            border: 1px solid rgba(96, 165, 250, 0.25);
+            border-radius: 16px;
+            padding: 22px 24px;
+            color: #c8d0e0;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+        .help-card h3 {
+            margin-bottom: 10px;
+            color: #e0e6f0;
+        }
+        .help-card kbd {
+            display: inline-block;
+            min-width: 42px;
+            padding: 1px 8px;
+            margin-right: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            color: #93c5fd;
+            text-align: center;
+        }
+        .event-log {
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.7;
+            font-family: Consolas, 'Microsoft YaHei', monospace;
+        }
+        .event-log div.warn { color: #eab308; }
+        .event-log div.danger { color: #ef4444; }
+        .event-log div.info { color: #6b7a9f; }
+        .event-empty { color: #4a5568; }
         .stat-card {
             background: rgba(255, 255, 255, 0.03);
             border-radius: 14px;
@@ -359,12 +443,12 @@
             color: #ef4444;
         }
         @media (max-width: 1100px) {
-            .stats-grid {
+            .stats-grid, .stats-extra {
                 grid-template-columns: repeat(3, 1fr);
             }
         }
         @media (max-width: 900px) {
-            .stats-grid {
+            .stats-grid, .stats-extra {
                 grid-template-columns: repeat(2, 1fr);
             }
             .row-2 {
@@ -386,7 +470,7 @@
             }
         }
         @media (max-width: 500px) {
-            .stats-grid {
+            .stats-grid, .stats-extra {
                 grid-template-columns: 1fr 1fr;
             }
             .stat-value {
@@ -478,11 +562,15 @@
                 <button class="btn" id="pauseBtn">⏸ 暂停</button>
                 <button class="btn btn-primary" id="resetBtn">↻ 重置</button>
                 <button class="btn btn-relearn" id="relearnBtn">🧬 重学</button>
+                <button class="btn" id="muteBtn">🔊 声音</button>
+                <button class="btn" id="exportBtn">📥 导出</button>
+                <button class="btn" id="pinBtn">📌 置顶</button>
                 <span class="mode-indicator" id="modeLabel">模式: 模拟</span>
             </div>
         </div>
 
         <div class="status-bar waiting" id="statusBar">⏳ 等待信号接入...</div>
+        <div class="pause-banner" id="pauseBanner">⏸ 已暂停 · 空格继续</div>
 
         <div class="stats-grid">
             <div class="stat-card">
@@ -510,6 +598,29 @@
             </div>
         </div>
 
+        <div class="stats-extra">
+            <div class="stat-card">
+                <div class="stat-label" id="labelDuration">⏱ 监测时长</div>
+                <div class="stat-value small text-gray" id="durationDisplay">00:00:00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label" id="labelPeak">⬆ 本段峰值</div>
+                <div class="stat-value small text-yellow" id="peakDisplay">-- <span class="unit">μV</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label" id="labelValley">⬇ 本段最低</div>
+                <div class="stat-value small text-blue" id="valleyDisplay">-- <span class="unit">μV</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label" id="labelClock">🕒 当前时间</div>
+                <div class="stat-value small text-gray" id="clockDisplay">--:--:--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label" id="labelRate">📶 刷新率</div>
+                <div class="stat-value small text-gray" id="rateDisplay">-- Hz</div>
+            </div>
+        </div>
+
         <div class="warning-box" id="warningBox">
             <span id="warnIcon">⏳</span>
             <span id="warnText">等待数据传入...</span>
@@ -529,6 +640,11 @@
         <div class="card">
             <div class="card-title" id="slopeChartTitle">📊 信号上升速度（斜率实时监测）</div>
             <div class="chart-wrap short"><canvas id="slopeChart"></canvas></div>
+        </div>
+
+        <div class="card" style="margin-bottom: 12px;">
+            <div class="card-title" id="eventLogTitle">📋 预警事件（本段）</div>
+            <div class="event-log" id="eventLog"><div class="event-empty" id="eventEmpty">暂无警戒/危险事件。越线时会记录在这里，可一并导出。</div></div>
         </div>
 
         <div class="footer-bar">
@@ -560,6 +676,19 @@
                 <button class="btn" id="cancelSerialBtn">取消</button>
                 <button class="btn btn-success" id="confirmSerialBtn">连接</button>
             </div>
+        </div>
+    </div>
+
+    <div class="help-overlay" id="helpOverlay">
+        <div class="help-card">
+            <h3 id="helpTitle">快捷键</h3>
+            <p><kbd>空格</kbd>暂停 / 继续</p>
+            <p><kbd>M</kbd>静音 / 恢复声音</p>
+            <p><kbd>S</kbd>导出本段 CSV</p>
+            <p><kbd>P</kbd>窗口置顶（仅桌面）</p>
+            <p><kbd>F11</kbd>全屏</p>
+            <p><kbd>?</kbd>打开 / 关闭本说明</p>
+            <p><kbd>Esc</kbd>关闭弹窗</p>
         </div>
     </div>
 
@@ -614,6 +743,16 @@
                 document.getElementById('labelRisk').textContent = '🏷 ' + C.labels.risk_level;
                 document.getElementById('labelPackets').textContent = '📦 ' + C.labels.packet_count;
                 document.getElementById('labelBaseline').textContent = '🧬 ' + C.labels.baseline;
+                document.getElementById('labelDuration').textContent = '⏱ ' + (C.labels.duration || '监测时长');
+                document.getElementById('labelPeak').textContent = '⬆ ' + (C.labels.peak || '本段峰值');
+                document.getElementById('labelValley').textContent = '⬇ ' + (C.labels.valley || '本段最低');
+                document.getElementById('labelClock').textContent = '🕒 ' + (C.labels.clock || '当前时间');
+                document.getElementById('labelRate').textContent = '📶 ' + (C.labels.rate || '刷新率');
+                document.getElementById('eventLogTitle').textContent = '📋 ' + (C.labels.event_log || '预警事件（本段）');
+                document.getElementById('eventEmpty').textContent = C.labels.event_empty || '暂无警戒/危险事件。';
+                document.getElementById('exportBtn').textContent = '📥 ' + (C.labels.export || '导出');
+                document.getElementById('pauseBanner').textContent = '⏸ ' + (C.labels.pause_banner || '已暂停 · 空格继续');
+                document.getElementById('helpTitle').textContent = C.labels.help_title || '快捷键';
                 document.getElementById('heatmapTitle').textContent = '🔥 ' + C.labels.heatmap;
                 document.getElementById('waveformTitle').textContent = '📈 ' + C.labels.waveform;
                 document.getElementById('slopeChartTitle').textContent = '📊 ' + C.labels.slope_chart;
@@ -667,6 +806,20 @@
             let currentSafeMax = C.baseline.default_warn;
             let currentRiskMax = C.baseline.default_danger;
             let isBaselineReady = false;
+            let alarmMuted = false;
+            let windowOnTop = false;
+            let sessionAccumMs = 0;
+            let sessionTickAt = Date.now();
+            let sessionPeak = null;
+            let sessionValley = null;
+            let lastAlertLevel = '';
+            let lastPacketAt = 0;
+            let packetTimes = [];
+            let warnHits = 0;
+            let dangerHits = 0;
+            let sessionRecords = [];
+            let sessionEvents = [];
+            let staleLatched = false;
 
             let manualIndex = 0;
             const manualData = C.simulation.preset_sequence.slice();
@@ -700,6 +853,10 @@
             }
 
             function startAlarm(level) {
+                if (alarmMuted) {
+                    stopAlarm();
+                    return;
+                }
                 initAudio();
                 if (audioCtx.state === 'suspended') {
                     try { audioCtx.resume(); } catch (e) {}
@@ -723,6 +880,215 @@
                 isAlarmPlaying = false;
                 if (alarmTimer) { clearInterval(alarmTimer);
                     alarmTimer = null; }
+            }
+
+            function formatElapsed(ms) {
+                const s = Math.max(0, Math.floor(ms / 1000));
+                const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+                const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+                const ss = String(s % 60).padStart(2, '0');
+                return hh + ':' + mm + ':' + ss;
+            }
+
+            function formatClock(d) {
+                return [d.getHours(), d.getMinutes(), d.getSeconds()].map(function(n) {
+                    return String(n).padStart(2, '0');
+                }).join(':');
+            }
+
+            function sessionElapsedMs() {
+                if (paused) return sessionAccumMs;
+                return sessionAccumMs + (Date.now() - sessionTickAt);
+            }
+
+            function uiCfg() {
+                return C.ui || {};
+            }
+
+            function notePacket() {
+                const t = Date.now();
+                lastPacketAt = t;
+                packetTimes.push(t);
+                const win = Math.max(1, (uiCfg().rate_window_s || 10)) * 1000;
+                while (packetTimes.length && t - packetTimes[0] > win) packetTimes.shift();
+                if (staleLatched) staleLatched = false;
+            }
+
+            function currentRateHz() {
+                const winS = Math.max(1, uiCfg().rate_window_s || 10);
+                if (packetTimes.length < 2) return 0;
+                return packetTimes.length / winS;
+            }
+
+            function updateEventTitle() {
+                const base = '📋 ' + (C.labels.event_log || '预警事件（本段）');
+                const extra = (warnHits || dangerHits)
+                    ? ('  · 警戒 ' + warnHits + '  · 危险 ' + dangerHits)
+                    : '';
+                document.getElementById('eventLogTitle').textContent = base + extra;
+            }
+
+            function applyPauseUi() {
+                const banner = document.getElementById('pauseBanner');
+                if (paused) banner.classList.add('show');
+                else banner.classList.remove('show');
+            }
+
+            function applyPinUi() {
+                const btn = document.getElementById('pinBtn');
+                if (windowOnTop) {
+                    btn.textContent = '📌 ' + (C.labels.pin_off || '已置顶');
+                    btn.classList.add('pinned');
+                } else {
+                    btn.textContent = '📌 ' + (C.labels.pin_on || '置顶');
+                    btn.classList.remove('pinned');
+                }
+            }
+
+            function toggleHelp() {
+                document.getElementById('helpOverlay').classList.toggle('show');
+            }
+
+            function closeHelp() {
+                document.getElementById('helpOverlay').classList.remove('show');
+            }
+
+            async function setWindowOnTop(enabled) {
+                windowOnTop = !!enabled;
+                try { localStorage.setItem('jyky_ontop', windowOnTop ? '1' : '0'); } catch (e) {}
+                applyPinUi();
+                if (typeof window.pywebview !== 'undefined' && window.pywebview.api && window.pywebview.api.set_on_top) {
+                    try { await window.pywebview.api.set_on_top(windowOnTop); } catch (e) {}
+                }
+            }
+
+            async function toggleFullscreen() {
+                if (typeof window.pywebview !== 'undefined' && window.pywebview.api && window.pywebview.api.toggle_fullscreen) {
+                    try { await window.pywebview.api.toggle_fullscreen(); } catch (e) {}
+                    return;
+                }
+                try {
+                    if (!document.fullscreenElement) {
+                        await document.documentElement.requestFullscreen();
+                    } else if (document.exitFullscreen) {
+                        await document.exitFullscreen();
+                    }
+                } catch (e) {}
+            }
+
+            function resetSessionExtras() {
+                sessionAccumMs = 0;
+                sessionTickAt = Date.now();
+                sessionPeak = null;
+                sessionValley = null;
+                lastAlertLevel = '';
+                lastPacketAt = 0;
+                packetTimes = [];
+                warnHits = 0;
+                dangerHits = 0;
+                staleLatched = false;
+                sessionRecords = [];
+                sessionEvents = [];
+                document.getElementById('peakDisplay').innerHTML = `-- <span class="unit">${UNIT}</span>`;
+                document.getElementById('valleyDisplay').innerHTML = `-- <span class="unit">${UNIT}</span>`;
+                document.getElementById('rateDisplay').textContent = '-- Hz';
+                updateEventTitle();
+                renderEventLog();
+            }
+
+            function renderEventLog() {
+                const box = document.getElementById('eventLog');
+                if (!sessionEvents.length) {
+                    box.innerHTML = '<div class="event-empty" id="eventEmpty">' +
+                        (C.labels.event_empty || '暂无警戒/危险事件。') + '</div>';
+                    return;
+                }
+                box.innerHTML = sessionEvents.slice(-12).reverse().map(function(ev) {
+                    return '<div class="' + ev.cls + '">' + ev.text + '</div>';
+                }).join('');
+            }
+
+            function pushEvent(cls, text) {
+                const now = formatClock(new Date());
+                sessionEvents.push({ cls: cls, text: now + '  ' + text });
+                if (sessionEvents.length > 80) sessionEvents = sessionEvents.slice(-80);
+                renderEventLog();
+            }
+
+            function updatePeakValley(val) {
+                if (sessionPeak === null || val > sessionPeak) sessionPeak = val;
+                if (sessionValley === null || val < sessionValley) sessionValley = val;
+                document.getElementById('peakDisplay').innerHTML =
+                    `${Math.round(sessionPeak)} <span class="unit">${UNIT}</span>`;
+                document.getElementById('valleyDisplay').innerHTML =
+                    `${Math.round(sessionValley)} <span class="unit">${UNIT}</span>`;
+            }
+
+            function applyMuteUi() {
+                const btn = document.getElementById('muteBtn');
+                if (alarmMuted) {
+                    btn.textContent = '🔇 ' + (C.labels.mute_off || '已静音');
+                    btn.classList.add('muted');
+                    stopAlarm();
+                } else {
+                    btn.textContent = '🔊 ' + (C.labels.mute_on || '声音');
+                    btn.classList.remove('muted');
+                }
+            }
+
+            function exportCsv() {
+                if (!sessionRecords.length && !sessionEvents.length) {
+                    alert(C.labels.export_empty || '本段还没有可导出的数据。');
+                    return;
+                }
+                const summary = [
+                    '# 产品,' + (C.branding.app_name || ''),
+                    '# 版本,' + (C.branding.version || ''),
+                    '# 导出时间,' + new Date().toLocaleString(),
+                    '# 监测时长,' + formatElapsed(sessionElapsedMs()),
+                    '# 峰值,' + (sessionPeak != null ? Math.round(sessionPeak) : ''),
+                    '# 最低,' + (sessionValley != null ? Math.round(sessionValley) : ''),
+                    '# 基线,' + (patientBaseline || ''),
+                    '# 警戒次数,' + warnHits,
+                    '# 危险次数,' + dangerHits,
+                    '# 数据包,' + dataCount,
+                    ''
+                ].join('\n');
+                const header = '时间,序号,数值,斜率,等级,基线,事件\n';
+                const rows = sessionRecords.map(function(r) {
+                    return [r.time, r.index, r.value, r.slope, r.level, r.baseline, r.event || ''].join(',');
+                });
+                const eventLines = ['', '预警事件', '时间,内容'].concat(
+                    sessionEvents.map(function(ev) { return ev.text.replace(/\s{2,}/, ','); })
+                );
+                const blob = new Blob(['\ufeff' + summary + header + rows.join('\n') + '\n' + eventLines.join('\n')], {
+                    type: 'text/csv;charset=utf-8'
+                });
+                const a = document.createElement('a');
+                const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                a.href = URL.createObjectURL(blob);
+                a.download = (C.branding.short_name || '监测记录') + '_' + stamp + '.csv';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            }
+
+            function loadSerialPrefs() {
+                try {
+                    return {
+                        port: localStorage.getItem('jyky_last_port') || '',
+                        baud: parseInt(localStorage.getItem('jyky_last_baud') || '', 10) || 0,
+                        mute: localStorage.getItem('jyky_mute') === '1'
+                    };
+                } catch (e) {
+                    return { port: '', baud: 0, mute: false };
+                }
+            }
+
+            function saveSerialPrefs(port, baud) {
+                try {
+                    if (port) localStorage.setItem('jyky_last_port', port);
+                    if (baud) localStorage.setItem('jyky_last_baud', String(baud));
+                } catch (e) {}
             }
 
             // ============================================
@@ -818,6 +1184,8 @@
 
                     console.log(`✅ 自适应基线学习完成: ${patientBaseline} ${UNIT}`);
                     console.log(`📊 警戒线: ${currentSafeMax} ${UNIT}, 危险线: ${currentRiskMax} ${UNIT}`);
+                    pushEvent('info', '基线已校准  ' + patientBaseline + UNIT +
+                        '  警戒' + currentSafeMax + UNIT + '  危险' + currentRiskMax + UNIT);
                 }
             }
 
@@ -852,6 +1220,7 @@
                 document.getElementById('baselineCard').classList.remove('baseline-active');
 
                 updateBaselineUI();
+                resetSessionExtras();
                 console.log('🔄 基线已重置，等待新数据学习');
             }
 
@@ -1084,6 +1453,7 @@
             function receiveData(rawValue) {
                 if (paused) return;
                 let val = clampDisplay(rawValue);
+                notePacket();
 
                 learnBaseline(val);
 
@@ -1169,6 +1539,28 @@
                 statusText.textContent = `${modeName} · ${level.replace(/[🔴🟡🔵🟢⚪]\s*/, '')}${baselineInfo}`;
                 dataLog.textContent =
                     `📡 ${Math.round(currentVal)} ${UNIT} | 斜率 ${slope.toFixed(1)} | 已收 ${dataCount} 个${patientBaseline ? ` | 基线 ${patientBaseline} ${UNIT}` : ''}`;
+
+                updatePeakValley(currentVal);
+                let recEvent = '';
+                if ((levelKey === 'red' || levelKey === 'yellow') && lastAlertLevel !== levelKey) {
+                    recEvent = level.replace(/[🔴🟡🔵🟢⚪]\s*/, '');
+                    if (levelKey === 'red') dangerHits += 1;
+                    else warnHits += 1;
+                    updateEventTitle();
+                    pushEvent(levelKey === 'red' ? 'danger' : 'warn',
+                        recEvent + '  ' + Math.round(currentVal) + UNIT);
+                }
+                lastAlertLevel = levelKey;
+                sessionRecords.push({
+                    time: formatClock(new Date()),
+                    index: dataCount,
+                    value: Math.round(currentVal),
+                    slope: slope.toFixed(1),
+                    level: level.replace(/[🔴🟡🔵🟢⚪]\s*/, ''),
+                    baseline: patientBaseline || '',
+                    event: recEvent
+                });
+                if (sessionRecords.length > 8000) sessionRecords = sessionRecords.slice(-8000);
 
                 startAlarm(levelKey);
 
@@ -1345,6 +1737,7 @@
                 modeLabel.textContent = '模式: 串口';
                 document.getElementById('statusBar').textContent = '🔌 串口已连接，等待数据...';
                 document.getElementById('statusBar').className = 'status-bar waiting';
+                pushEvent('info', '已连接串口' + (portName ? ('  ' + portName) : ''));
             }
 
             function openSerialModal() {
@@ -1372,6 +1765,17 @@
                         opt.textContent = p.device + (p.description ? ('  ' + p.description) : '');
                         select.appendChild(opt);
                     });
+                    const prefs = loadSerialPrefs();
+                    if (prefs.port) {
+                        const match = Array.from(select.options).some(function(o) { return o.value === prefs.port; });
+                        if (match) select.value = prefs.port;
+                    }
+                    if (prefs.baud) {
+                        const baudSelect = document.getElementById('baudSelect');
+                        if (Array.from(baudSelect.options).some(function(o) { return o.value === String(prefs.baud); })) {
+                            baudSelect.value = String(prefs.baud);
+                        }
+                    }
                 } catch (e) {
                     select.innerHTML = '<option value="">扫描失败</option>';
                 }
@@ -1390,6 +1794,7 @@
                     return;
                 }
                 closeSerialModal();
+                saveSerialPrefs(port, baud);
                 markSerialConnected(port);
             }
 
@@ -1481,6 +1886,7 @@
                 document.getElementById('statusBar').textContent = '📡 已切换模拟模式';
                 document.getElementById('statusBar').className = 'status-bar waiting';
                 stopAlarm();
+                pushEvent('info', '已断开串口，切换模拟');
             }
 
             function startSerialPolling() {
@@ -1512,10 +1918,44 @@
                 if (e.target === this) closeSerialModal();
             });
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') closeSerialModal();
+                if (e.key === 'Escape') {
+                    closeSerialModal();
+                    closeHelp();
+                    return;
+                }
+                const tag = (e.target && e.target.tagName) || '';
+                if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+                if (e.key === '?' || e.key === 'F1' || e.key === '/') {
+                    e.preventDefault();
+                    toggleHelp();
+                } else if (e.key === 'm' || e.key === 'M') {
+                    document.getElementById('muteBtn').click();
+                } else if (e.key === 's' || e.key === 'S') {
+                    exportCsv();
+                } else if (e.key === 'p' || e.key === 'P') {
+                    document.getElementById('pinBtn').click();
+                } else if (e.key === 'F11') {
+                    e.preventDefault();
+                    toggleFullscreen();
+                } else if (e.code === 'Space') {
+                    e.preventDefault();
+                    document.getElementById('pauseBtn').click();
+                }
             });
-            window.addEventListener('pywebviewready', startSerialPolling);
-            if (isDesktopApp()) startSerialPolling();
+            window.addEventListener('pywebviewready', function() {
+                startSerialPolling();
+                const savedTop = (function() {
+                    try { return localStorage.getItem('jyky_ontop') === '1'; } catch (e) { return false; }
+                })();
+                if (savedTop || uiCfg().on_top_default) setWindowOnTop(true);
+            });
+            if (isDesktopApp()) {
+                startSerialPolling();
+                const savedTop = (function() {
+                    try { return localStorage.getItem('jyky_ontop') === '1'; } catch (e) { return false; }
+                })();
+                if (savedTop || uiCfg().on_top_default) setWindowOnTop(true);
+            }
             document.getElementById('sendBtn').addEventListener('click', handleManualSend);
             document.getElementById('manualInput').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
@@ -1524,7 +1964,34 @@
                 }
             });
 
+            document.getElementById('muteBtn').addEventListener('click', function() {
+                alarmMuted = !alarmMuted;
+                try { localStorage.setItem('jyky_mute', alarmMuted ? '1' : '0'); } catch (e) {}
+                applyMuteUi();
+                if (!alarmMuted) {
+                    initAudio();
+                    if (audioCtx && audioCtx.state === 'suspended') {
+                        try { audioCtx.resume(); } catch (e) {}
+                    }
+                    playBeep(C.alarm.warn_hz, C.alarm.warn_beep_s);
+                }
+            });
+            document.getElementById('exportBtn').addEventListener('click', exportCsv);
+            document.getElementById('pinBtn').addEventListener('click', function() {
+                if (typeof window.pywebview === 'undefined') {
+                    alert('窗口置顶仅桌面软件可用。');
+                    return;
+                }
+                setWindowOnTop(!windowOnTop);
+            });
+            document.getElementById('helpOverlay').addEventListener('click', function(e) {
+                if (e.target === this) closeHelp();
+            });
+
             document.getElementById('relearnBtn').addEventListener('click', function() {
+                if (uiCfg().confirm_relearn !== false) {
+                    if (!confirm('将丢掉当前基线并重新学习，确定吗？')) return;
+                }
                 resetBaselineLearning();
                 // 如果当前是模拟模式，生成初始数据供学习
                 if (currentMode === 'sim' || currentMode === 'manual_free') {
@@ -1603,9 +2070,16 @@
             });
 
             document.getElementById('pauseBtn').addEventListener('click', function() {
-                paused = !paused;
+                if (!paused) {
+                    sessionAccumMs += Date.now() - sessionTickAt;
+                    paused = true;
+                } else {
+                    paused = false;
+                    sessionTickAt = Date.now();
+                }
                 this.textContent = paused ? '▶ 继续' : '⏸ 暂停';
                 this.style.borderColor = paused ? '#eab308' : 'rgba(255,255,255,0.08)';
+                applyPauseUi();
                 if (paused) {
                     stopAlarm();
                     statusText.textContent = '⏸ 已暂停';
@@ -1621,6 +2095,9 @@
             });
 
             document.getElementById('resetBtn').addEventListener('click', function() {
+                if (uiCfg().confirm_reset) {
+                    if (!confirm('清空本段波形和统计（已学基线会保留），确定吗？')) return;
+                }
                 stopAlarm();
                 if (isBaselineReady && patientBaseline !== null) {
                     // 保留基线，重置数据
@@ -1645,6 +2122,7 @@
                     dataLog.textContent = `📡 已重置，基线 ${patientBaseline} ${UNIT} 保留`;
                     document.getElementById('statusBar').textContent = `🔄 已重置 · 基线 ${patientBaseline} ${UNIT} 保留`;
                     document.getElementById('statusBar').className = 'status-bar ready';
+                    resetSessionExtras();
                     // 生成显示数据（不增加计数）
                     generateDisplayData(C.simulation.reset_points, patientBaseline);
                     // 恢复计数显示为0
@@ -1698,6 +2176,33 @@
             }
             dataCount = 0;
             countDisplay.textContent = '0';
+            resetSessionExtras();
+            const prefs0 = loadSerialPrefs();
+            alarmMuted = !!prefs0.mute;
+            applyMuteUi();
+            applyPinUi();
+            applyPauseUi();
+            setInterval(function() {
+                const now = new Date();
+                document.getElementById('clockDisplay').textContent = formatClock(now);
+                document.getElementById('durationDisplay').textContent = formatElapsed(sessionElapsedMs());
+                const hz = currentRateHz();
+                document.getElementById('rateDisplay').textContent = (hz ? hz.toFixed(1) : '--') + ' Hz';
+                const staleMs = uiCfg().stale_ms == null ? 3000 : uiCfg().stale_ms;
+                const bar = document.getElementById('statusBar');
+                if (currentMode === 'serial' && !paused && lastPacketAt && staleMs > 0 &&
+                    (now.getTime() - lastPacketAt) >= staleMs) {
+                    if (!staleLatched) {
+                        staleLatched = true;
+                        pushEvent('warn', '串口信号中断  已 ' + Math.round((now.getTime() - lastPacketAt) / 1000) + ' 秒无数据');
+                    }
+                    bar.textContent = '⚠️ ' + fillTemplate(C.labels.stale_text || '串口超过{seconds}秒没有新数据，请检查设备连接', {
+                        seconds: Math.round(staleMs / 1000)
+                    });
+                    bar.className = 'status-bar stale';
+                }
+            }, 1000);
+            document.getElementById('clockDisplay').textContent = formatClock(new Date());
 
             startModeTimer();
             modeLabel.textContent = '模式: 模拟';

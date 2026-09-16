@@ -89,13 +89,26 @@
     "baud_options": [9600, 115200, 57600, 38400, 19200, 4800]
   },
   "alarm": {
-    "说明": "警戒（黄）和紧急危险（红）的提示音。安全、趋势预判不响。暂停会静音。",
+    "说明": "警戒（黄）和紧急危险（红）的提示音。安全、趋势预判不响。暂停会静音。单独静音不改算法。",
     "danger_hz": 900,
     "danger_beep_s": 0.15,
     "danger_interval_ms": 300,
     "warn_hz": 600,
     "warn_beep_s": 0.2,
     "warn_interval_ms": 1000
+  },
+  "ui": {
+    "说明": "界面辅助功能，不改变预警算法和阈值。",
+    "confirm_reset": false,
+    "confirm_reset_说明": "点重置前是否弹出确认。演示时建议 false。",
+    "confirm_relearn": true,
+    "confirm_relearn_说明": "点重学前是否弹出确认，防止误清基线。",
+    "stale_ms": 3000,
+    "stale_ms_说明": "串口模式下超过此时长没有新数据会提示信号中断。0 表示关闭。",
+    "rate_window_s": 10,
+    "rate_window_s_说明": "刷新率按最近多少秒的数据包估算。",
+    "on_top_default": false,
+    "on_top_default_说明": "桌面窗口启动时是否置顶。也可在界面用「置顶」或快捷键 P 切换。"
   },
   "labels": {
     "说明": "界面上能看到的标题文字。改这里就能把「肌电」换成「压力」等，不必改 index.html。footer_interval 里的 {interval}、footer_hint 里的 {count} 会自动替换。",
@@ -110,6 +123,22 @@
     "serial_title": "连接串口设备",
     "serial_hint": "选择设备对应的 COM 口。手动输入数据无需连接串口，直接在顶部输入后点发送即可。",
     "footer_interval": "实时流 / {interval}ms",
-    "footer_hint": "前{count}个有效数据点自动学习基线"
+    "footer_hint": "前{count}个有效数据点自动学习基线",
+    "duration": "监测时长",
+    "peak": "本段峰值",
+    "valley": "本段最低",
+    "clock": "当前时间",
+    "rate": "刷新率",
+    "event_log": "预警事件（本段）",
+    "mute_on": "声音",
+    "mute_off": "已静音",
+    "export": "导出",
+    "pin_on": "置顶",
+    "pin_off": "已置顶",
+    "pause_banner": "已暂停 · 空格继续",
+    "stale_text": "串口超过{seconds}秒没有新数据，请检查设备连接",
+    "export_empty": "本段还没有可导出的数据。",
+    "help_title": "快捷键",
+    "event_empty": "暂无警戒/危险事件。越线时会记录在这里，可一并导出。"
   }
 }
